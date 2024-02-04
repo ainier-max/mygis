@@ -1,0 +1,122 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--axios依赖-->
+  <script src="../../../map/vue-lib/vuejs/axios.min.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+      window.testMarker = null;
+
+      function drawMarkerTest() {
+          if (window.testMarker != null) {
+              mapVue.$refs.map.removeLayer(window.testMarker);
+              window.testMarker = null;
+          }
+          var markerJSON = {};
+          markerJSON.iconUrl = "../images/green.png";
+          markerJSON.iconAnchor = [16, 16];
+          markerJSON.width = 32;
+          markerJSON.height = 32;
+          var dragFlag = false;//是否可移动,仅适用于leaflet开发技术，minemap不生效
+          mapVue.$refs.map.drawMarker(markerJSON, dragFlag, markerReceiver);
+      }
+
+      function markerReceiver(markerObj) {
+          window.testMarker = markerObj;
+          console.log("上图的对象", markerObj);
+          console.log("采集坐标：", markerObj.xy);
+          var param = {};
+          param.lat = markerObj.xy.lat;
+          param.lng = markerObj.xy.lng;
+          param.regioncode = "350203";
+          mapVue.$refs.api.judgeRegionByXY(param, judgeXzqhByXYCallBack);
+      }
+
+      function judgeXzqhByXYCallBack(resp) {
+          console.log("行政区划与点关系判断结果", resp);
+          document.getElementById("relation").value = "点与辖区关系:" + resp.data.flag;
+      }
+
+      //以下代码仅供验证，显示出该行政区划，方便验证。
+      function addXzqhTest() {
+        if (typeof (mapVue.$refs.map) != "undefined") {
+          addGeoLayer(JSON.parse(mapVue.$refs.map.readFile("../../../data/siming.json")));
+        } else {
+          window.setTimeout(loadGeoMap, 10);
+        }
+      }
+
+      function addGeoLayer(data){
+        console.log("data,",data);
+        for(var i=0;i<data.features.length;i++){
+          var option={};
+          option.weight=1;
+          option.color="#FF69B4";
+          //获取随机颜色
+          option.fillColor=getColor();
+          option.fillOpacity=0.8;
+          var zxqhlayer=mapVue.$refs.map.addPolygonByGeojson(JSON.stringify(data.features[i].geometry),option);
+          zxqhlayer.adcode=data.features[i].properties.adcode;
+          zxqhlayer.name=data.features[i].properties.name;
+          zxqhlayer.level=data.features[i].properties.level;
+          //绑定提示
+          var option={direction:'top',offset:[0,0],permanent:false,opacity:1,sticky:true};
+          var content="<div style='color:blue'>"+zxqhlayer.name+"</div>";
+          mapVue.$refs.map.bindTooltip(zxqhlayer,content,option);
+        }
+      }
+
+      function getColor(){
+        var colourstr="#"
+        var coloruarr=["a","b","c","d","e","f","0","1","2","3","4","5","6","7","8","9"]
+        for(var p=0;p<6;p++){
+          var n=Math.floor(Math.random()*coloruarr.length+1)-1;
+          colourstr+=coloruarr[n];
+        }
+        return colourstr;
+      }
+  </script>
+</head>
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="mapid" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <api-component ref="api" :id="apiid" :axios="axios" map-ref="map"></api-component>
+
+  <el-button type="primary" onclick='addXzqhTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>先画出行政区划
+  </el-button>
+  <el-button type="primary" onclick='drawMarkerTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    然后放置点
+  </el-button>
+  <el-input type="textarea" :rows="1"
+            id="relation" placeholder="判断点与行政区划的关系"
+            style='z-index:1000;position:absolute;top:150px;left:60px;width: 200px'></el-input>
+
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            mapid: "map",
+            apiid: "api",
+            type: "js",
+            config: window.tiandituMapConfig,
+            axios: axios,
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd'),
+             'api-component': httpVueLoader('../../vue-map-component/tools/api-component.vue', 'frontEnd'),
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

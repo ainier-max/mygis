@@ -1,0 +1,90 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+
+
+
+      //必须加装地形图
+      var terrainLayer = new Cesium.CesiumTerrainProvider({
+        url: "http://data.marsgis.cn/terrain",
+        requestVertexNormals: true,
+        requestWaterMask: true
+      });
+      mapVue.$refs.map.viewer.scene.terrainProvider = terrainLayer;
+      //重点，必须设置该配置
+      viewer.scene.globe.depthTestAgainstTerrain = true;
+      //定位
+      var obj = {lng:118.1050887298584, lat: 24.449001083374023,eyeHeight:5000,pitch:-20,heading:0.0,time:1};
+      mapVue.$refs.map.viewerFlyToLonLat(obj);
+    }
+    function addFlood() {
+      var positions = [
+        118.0850887298584, 24.439001083374023, 118.0850887298584, 24.464149475097656,
+        118.13135147094728, 24.464149475097656, 118.13135147094728, 24.439001083374023
+      ];
+      //初始高度
+      var waterHeight = 10;
+      var entity = viewer.entities.add({
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(positions),
+          material:  Cesium.Color.BLUE.withAlpha(0.5),  //new Cesium.Color(47, 68, 130, 1.0)    Cesium.Color.RED.withAlpha(0.5)
+          extrudedHeight: new Cesium.CallbackProperty(function () {
+            return waterHeight;
+          },false)
+        }
+      });
+
+
+      viewer.clock.onTick.addEventListener(function () {
+        if (waterHeight > 250) {
+          waterHeight = 10;
+        }
+        waterHeight += 0.1;
+      })
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addFlood();' style='z-index:1000;position:absolute;top:50px;left:60px'>淹没分析
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

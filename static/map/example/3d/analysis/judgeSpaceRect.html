@@ -1,0 +1,176 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //定位
+      var obj = {lng:118.0850887298584, lat: 24.439001083374023,eyeHeight:15000,pitch:-60,heading:0.0,time:1};
+      mapVue.$refs.map.viewerFlyToLonLat(obj);
+      createRandom();
+    }
+
+    var entityArr=[];
+    function createRandom(){
+      for(var i=0;i<200;i++){
+        var xTemp=118.03 + Math.random() * 0.10;
+        var yTemp=24.39 + Math.random() * 0.10;
+        var entity={
+          id:"point"+i,
+          position: Cesium.Cartesian3.fromDegrees(xTemp, yTemp),
+          point: {
+            pixelSize: 10,
+            color: Cesium.Color.YELLOW,
+          },
+        };
+        viewer.entities.add(entity);
+        entityArr.push(entity);
+      }
+    }
+
+
+    function spaceFind(west,south,east,north){
+      var ellipsoid=viewer.scene.globe.ellipsoid;
+      for(var i=0;i<entityArr.length;i++){
+        var cartographic=ellipsoid.cartesianToCartographic(entityArr[i].position);
+        var lng=Cesium.Math.toDegrees(cartographic.longitude);
+        var lat=Cesium.Math.toDegrees(cartographic.latitude);
+        if(west<=lng && lng<=east && south<=lat && lat<=north){
+          var selectedEntity=viewer.entities.getById(entityArr[i].id);
+          selectedEntity.point.color=Cesium.Color.RED;
+          console.log("selectedEntity:",selectedEntity);
+        }
+      }
+    }
+
+
+    //以下代码为矩形采集
+    //矩形采集
+    var handler=null;
+    var startPoint=null;
+    var rect=null;
+    function rectGather() {
+      rect=null;
+      //鼠标变成加号
+      document.getElementById("map").style.cursor = "crosshair";
+      //进制地图移动
+      viewer.scene.screenSpaceCameraController.enableRotate = false;
+      viewer.scene.screenSpaceCameraController.enableZoom = false;
+      handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      //鼠标点击事件
+      handler.setInputAction((event) => {
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray = viewer.camera.getPickRay(event.position);
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        console.log("cartesian:", cartesian);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        startPoint = viewer.entities.add({
+          name: 'point',
+          position: cartesian,
+          point: {
+            color: Cesium.Color.CHARTREUSE.withAlpha(1),
+            pixelSize: 10,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 1
+          }
+        });
+
+        rect=viewer.entities.add({
+          rectangle: {
+            coordinates: Cesium.Rectangle.fromCartesianArray([cartesian,cartesian]),
+            material: Cesium.Color.GREENYELLOW.withAlpha(0.5),
+            outline:true,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 3
+          },
+        });
+      }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+      // 对鼠标移动事件的监听
+      handler.setInputAction((event) => {
+        if(startPoint==null || rect==null){
+          return;
+        }
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray = viewer.camera.getPickRay(event.endPosition);
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!cartesian) {
+          return;
+        }
+        //console.log("cartesian:", cartesian);
+        var startCartesian=startPoint.position.getValue(Cesium.JulianDate.now());
+        //console.log("startCartesian:",startCartesian);
+
+        rect.rectangle.coordinates=new Cesium.CallbackProperty(function (time,result){
+          return Cesium.Rectangle.fromCartesianArray([startCartesian,cartesian]);
+        },false);
+
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+      // 对鼠标抬起事件的监听(结束点采集)
+      handler.setInputAction((event) => {
+        //鼠标变成默认
+        document.getElementById("map").style.cursor = "default";
+        viewer.scene.screenSpaceCameraController.enableRotate = true;
+        viewer.scene.screenSpaceCameraController.enableZoom = true;
+        viewer.entities.remove(startPoint);
+        //移除地图鼠标点击事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOWN)
+        //移除地图鼠标移动事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE)
+        //移除地图鼠标抬起事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_UP)
+        var dke = rect.rectangle.coordinates.getValue();
+        console.log("修改后的面坐标(笛卡尔)：", dke);
+        var east=Cesium.Math.toDegrees(dke.east);
+        var west=Cesium.Math.toDegrees(dke.west);
+        var north=Cesium.Math.toDegrees(dke.north);
+        var south=Cesium.Math.toDegrees(dke.south);
+        console.log("矩形西南东北坐标:",west,south,east,north);
+        //空间判断
+        spaceFind(west,south,east,north);
+      }, Cesium.ScreenSpaceEventType.LEFT_UP);
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='rectGather();' style='z-index:1000;position:absolute;top:50px;left:60px'>矩形采集(鼠标点击后压住拖动)
+  </el-button>
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.mapboxMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

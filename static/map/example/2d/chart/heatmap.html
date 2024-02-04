@@ -1,0 +1,114 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      var heatmap=null;
+      var heatPoints = new Array();
+      var option=null;
+      function addHeatMapTest() {
+
+          for (var i = 0; i < 2000; i++) {
+              var zby = 24.44 + Math.random() * 0.10;
+              var zbx = 118.08 + Math.random() * 0.10;
+              var value=Math.floor(Math.random() * 100);
+              heatPoints.push([zby, zbx,value]);
+          }
+          for (var i = 0; i < 100; i++) {
+              var zby = 24.45 + Math.random() * 0.01;
+              var zbx = 118.08 + Math.random() * 0.01;
+              var value=Math.floor(Math.random() * 100);
+              heatPoints.push([zby, zbx,value]);
+          }
+          for (var i = 0; i < 300; i++) {
+              var zby = 24.47 + Math.random() * 0.02;
+              var zbx = 118.12 + Math.random() * 0.02;
+              var value=Math.floor(Math.random() * 100);
+              heatPoints.push([zby, zbx,value]);
+          }
+          //聚合半径
+          option = {
+              //像素为单位，热力半径（热力根据级别设计监控）
+              max:50,
+              radius: 10,//单位像素
+              maxZoom:15,
+              gradient: {0.2:"white",0.4: "blue", 0.6: "cyan", 0.7: "lime", 0.8: "yellow", 1: "red"},
+              //显示范围
+              showRadius:200,//单位米
+          };
+          console.log("heatPoints",heatPoints);
+          heatmap = mapVue.$refs.map.addHeatMap(heatPoints, option);
+          console.log("热力", heatmap);
+          mapVue.$refs.map.onMapEvent('click', heatMapCallback,'heatmap');
+      }
+      function heatMapCallback(e){
+          console.log("e11:",e);
+          var count=0;
+          for(var i=0;i<heatPoints.length;i++){
+              var flag=pointlnCicle(heatPoints[i][1],heatPoints[i][0],e.latlng.lng,e.latlng.lat,option.showRadius);
+              if(flag==true){
+                  count=count+heatPoints[i][2];
+              }
+          }
+          var popupOption={className: 'custom',minWidth:20};
+          var point=[e.latlng.lat,e.latlng.lng];
+          mapVue.$refs.map.addPopup(popupOption,point,"周边200米总量："+count);
+      }
+      function pointlnCicle(x1,y1,x2,y2,r){
+          var radiusMeter=r/(1000*101.11);
+          var xdi=x2-x1;
+          var ydi=y2-y1;
+          //console.log("radiusMeter",radiusMeter);
+          if(Math.pow((xdi*xdi+ydi*ydi),0.5)<radiusMeter){
+              return true;
+          }else{
+              return false;
+          }
+      };
+      function removeHeatMapTest(){
+          //移除热力图
+          mapVue.$refs.map.removeLayer(heatmap);
+          //移除地图事件
+          mapVue.$refs.map.offMapEvent('click',heatMapCallback,'heatmap');
+          //关闭所有气泡框
+          mapVue.$refs.map.map.closePopup();
+          heatmap=null;
+          heatPoints=[];
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addHeatMapTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>热力
+  </el-button>
+
+  <el-button type="primary" onclick='removeHeatMapTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>删除热力图
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            //'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

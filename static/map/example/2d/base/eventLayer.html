@@ -1,0 +1,101 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      var marker=null;
+      /**
+       * 添加点击事件
+       */
+      function addMarkerClickTest() {
+          var markerJSON = {};
+          //xy坐标
+          markerJSON.xy = [24.502422570142833, 118.15471659369913];
+          //图片位置
+          markerJSON.iconUrl = "../images/poi.png";
+          //图片偏移（坐标固定在图标的哪个点，[0,0]表示图标的左上角）
+          markerJSON.iconAnchor = [21, 17];
+          //图片大小
+          markerJSON.width = 42;
+          markerJSON.height = 34;
+          marker = mapVue.$refs.map.addMarker(markerJSON);
+          marker.lat="24.502422570142833";
+          marker.lng="118.15471659369913";
+          mapVue.$refs.map.onLayerEvent("click",marker, markerClickEventCallBack,"clickname");
+          mapVue.$refs.map.onLayerEvent("mouseover",marker, markerMouseOverEventCallBack,"mouseovername");
+          mapVue.$refs.map.onLayerEvent("mouseout",marker, markerMouseOutEventCallBack,"mouseoutname");
+      }
+
+      /**
+       * 附加的事件
+       */
+      function markerClickEventCallBack(e) {
+          console.log("图层点击事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+      /**
+       * 附加的事件
+       */
+      function markerMouseOverEventCallBack(e) {
+          console.log("图层移入事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+      /**
+       * 附加的事件
+       */
+      function markerMouseOutEventCallBack(e) {
+          console.log("图层移出事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+
+      /**
+       * 移除点击事件
+       */
+      function removeMarkerClickTest() {
+          //会移除点击事件
+          mapVue.$refs.map.offLayerEvent("click",marker,markerClickEventCallBack,"clickname");
+          //不会移除事件
+          mapVue.$refs.map.offLayerEvent("mouseover",marker,markerMouseOverEventCallBack,"该参数与on不对应就无法删除");
+          //会移除事件
+          mapVue.$refs.map.offLayerEvent("mouseout",marker,markerMouseOutEventCallBack,"mouseoutname");
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addMarkerClickTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    marker绑定事件
+  </el-button>
+
+  <el-button type="primary" onclick='removeMarkerClickTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    marker解除事件
+  </el-button>
+
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

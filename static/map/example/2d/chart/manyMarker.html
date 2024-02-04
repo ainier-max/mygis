@@ -1,0 +1,117 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      var heatPoints = new Array();
+      //模拟10万个点
+      for (var i = 0; i < 100000; i++) {
+          var zby = 20.44 + Math.random() * 11;
+          var zbx = 113.08 + Math.random() * 11;
+          var point = [zby, zbx];
+          point.content = "坐标：" + zby + "," + zbx;
+          heatPoints.push(point);
+      }
+
+      var canvasLayer = null;
+
+      function addManyMarkerTest() {
+          if (canvasLayer != null) {
+              mapVue.$refs.map.removeLayer(canvasLayer);
+              canvasLayer = null;
+          }
+          mapVue.$refs.map.zoomTo(8);
+          canvasLayer = mapVue.$refs.map.addCanvas(this, "onDrawLayer");
+          mapVue.$refs.map.onMapEvent("click", mapEventCallBack, "onclick");
+      }
+
+      function onDrawLayer(info) {
+          console.log("info", info);
+          var ctx = info.canvas.getContext('2d');
+          ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
+          ctx.fillStyle = "rgba(255,116,0, 0.8)";
+          for (var i = 0; i < heatPoints.length; i++) {
+              var d = heatPoints[i];
+              if (info.bounds.contains([d[0], d[1]])) {
+                  dot = info.layer._map.latLngToContainerPoint([d[0], d[1]]);
+                  ctx.beginPath();
+                  ctx.arc(dot.x, dot.y, 3, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.closePath();
+              }
+          }
+      }
+
+      //气泡框展示，由于canvas不支持附加事件，只能通过地图点击的坐标进行判断其位置
+      function mapEventCallBack(e) {
+          console.log("附加事件回调：", e);
+          var lat = e.latlng.lat;
+          var lng = e.latlng.lng;
+          var clickPoint = [lat, lng];
+          //矩形过滤数据
+          var degree = mapVue.$refs.map.meterToDegree(500);
+          var xmin = lng - degree;
+          var xmax = lng + degree;
+          var ymin = lat - degree;
+          var ymax = lat + degree;
+          var newPoints = [];
+          for (var i = 0; i < heatPoints.length; i++) {
+              if (heatPoints[i][0] > ymin && heatPoints[i][0] < ymax && heatPoints[i][1] > xmin && heatPoints[i][1] < xmax) {
+                  newPoints.push(heatPoints[i]);
+              }
+          }
+          //拿取距离点击位置最近的点数据
+          var recentPoint = {};
+          for (var i = 0; i < newPoints.length; i++) {
+              var distace = mapVue.$refs.map.distace(clickPoint, newPoints[i]);
+              if (typeof (recentPoint.distace) == "undefined") {
+                  recentPoint.distace = distace;
+                  recentPoint.point = newPoints[i];
+              } else {
+                  if (Number(distace) < Number(recentPoint.distace)) {
+                      recentPoint.distace = distace;
+                      recentPoint.point = newPoints[i];
+                  }
+              }
+          }
+          console.log("recentPoint:", recentPoint);
+          if (typeof (recentPoint.point) != "undefined") {
+              var option = {closeOnClick: false, closeButton: true, offset: [0, 0]};
+              var html = "<span style='color:red'>" + recentPoint.point.content + "</span>";
+              mapVue.$refs.map.addPopup(option, recentPoint.point, html);
+          }
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addManyMarkerTest();' style='z-index:1000;position:absolute;top:50px;left:50px'>
+    大量上图
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

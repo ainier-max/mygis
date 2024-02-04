@@ -1,0 +1,137 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      /**
+       * 箭头线
+       */
+      function addDirectionPolylineTest() {
+          var polylineJson = {};
+          //线的坐标串
+          polylineJson.xys = [
+              [24.522171020507812,118.04740905761719],[24.466896057128906,118.07453155517578],[24.50122833251953,118.13667297363283],[24.537620544433594,118.14182281494139],[24.561309814453125,118.09341430664062],[24.605941772460938,118.09204101562501],[24.605941772460938,118.1795883178711],[24.56645965576172,118.18096160888672],[24.57469940185547,118.05049896240236],[24.519081115722656,118.06766510009767],[24.46483612060547,118.11229705810548],[24.49504852294922,118.19091796875],[24.529037475585938,118.10955047607422]
+          ];
+          //线的样式
+          polylineJson.option = {};
+          //线的宽度
+          polylineJson.option.weight = "3";
+          var polyline = mapVue.$refs.map.addPolyline(polylineJson);
+          polyline.bindPopup("这是线");
+          console.log("实线", polyline);
+          //给线加箭头
+          var iconJson2 = {};
+          iconJson2.option = {};
+          iconJson2.option.iconUrl = "../images/plane.png";
+          iconJson2.option.iconAnchor = [20, 20];
+          iconJson2.option.iconSize=[40, 40];
+          var markerIcon2 = mapVue.$refs.map.createIcon(iconJson2);
+          polyline.icon = markerIcon2;
+          var markers = mapVue.$refs.map.addDirectionIcon(polyline);
+          console.log("markers:",markers);
+      }
+
+      function addDirectionDashPolylineTest() {
+          //虚线
+          var dashJson = {};
+          dashJson.xys = [
+              [24.445696, 118.081398],
+              [24.464321, 118.111181],
+              [24.528694, 118.12191]
+          ];
+          dashJson.option = {};
+          dashJson.option.color = '#0000ff';
+          dashJson.option.weight = '3';
+          var  dashPolyline= mapVue.$refs.map.addDashPolyline(dashJson);
+          console.log("虚线", dashPolyline);
+
+
+      }
+      function addCenterDivPolylineTest(){
+          //虚线
+          var dashJson = {};
+          dashJson.xys = [
+              [24.510154724121097,118.0195999145508],
+              [24.5815991210937504,118.16516876220703]
+          ];
+          dashJson.option = {};
+          dashJson.option.color = '#0000ff';
+          dashJson.option.weight = '3';
+          var  dashPolyline= mapVue.$refs.map.addDashPolyline(dashJson);
+          console.log("虚线", dashPolyline);
+
+          //给线加箭头
+          var iconJson2 = {};
+          iconJson2.option = {};
+          iconJson2.option.iconUrl = "../images/plane.png";
+          iconJson2.option.iconAnchor = [15, 15];
+          iconJson2.option.iconSize=[30, 30];
+          var markerIcon2 = mapVue.$refs.map.createIcon(iconJson2);
+          dashPolyline.icon = markerIcon2;
+          var markers = mapVue.$refs.map.addDirectionIcon(dashPolyline);
+          console.log("markers:",markers);
+
+          //为线段添加div
+          var startPoint = [24.510154724121097,118.0195999145508];
+          var endPoint = [24.5815991210937504,118.16516876220703];
+          //计算倾斜角度
+          var angle = Math.atan2((endPoint[0] - startPoint[0]), (endPoint[1] - startPoint[1]));
+          var theta = -angle * (180 / Math.PI);
+          console.log("rotateRatio", theta);
+          //计算中心点
+          var centerPoint=[(endPoint[0] + startPoint[0])/2,(endPoint[1] + startPoint[1])/2];
+          console.log("中心点位置：",centerPoint);
+          var divJson2 = {};
+          divJson2.xy = centerPoint;
+          divJson2.option = {};
+          divJson2.option.iconAnchor = [105, 35];
+          var html="<div style='font-size:20px;color:white;opacity:0.8;width: 210px;height:30px;background-color: green;transform: rotateZ("+theta+"deg);transform-origin:center center;'>";
+          html+="98.288MHz | 35分40秒";
+          html+="</div>";
+          divJson2.option.html =html;
+          var centerDiv=mapVue.$refs.map.addDiv(divJson2);
+          console.log("centerDiv",centerDiv);
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addDirectionPolylineTest();'
+             style='z-index:1000;position:absolute;top:50px;left:60px'>箭头线(实线)
+  </el-button>
+  <el-button type="primary" onclick='addDirectionDashPolylineTest();'
+             style='z-index:1000;position:absolute;top:100px;left:50px'>箭头线(虚线)
+  </el-button>
+
+  <el-button type="primary" onclick='addCenterDivPolylineTest();'
+             style='z-index:1000;position:absolute;top:150px;left:50px'>线段中间叠加内容(虚线)
+  </el-button>
+
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            //'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+      var viewer=null;
+      function loadEnd(){
+          console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.viewer);
+        viewer=mapVue.$refs.map.viewer;
+          var terrainLayer = new Cesium.CesiumTerrainProvider({
+            //url: "http://10.254.10.38/terrain",//部分
+            url: "http://data.marsgis.cn/terrain",
+          });
+        viewer.scene.terrainProvider = terrainLayer;
+        //定位
+        var obj = {lng:118.1050887298584, lat: 24.449001083374023,eyeHeight:5000,pitch:-20,heading:0.0,time:1};
+        mapVue.$refs.map.viewerFlyToLonLat(obj);
+      }
+
+      /**
+       //获取地形高度需要加载地形服务
+       terrainProvider : new Cesium.CesiumTerrainProvider({
+             url: "http://data.marsgis.cn/terrain",
+         })
+       */
+
+      //
+
+      function getHeight(){
+        //方法1（该值在不同级别下所获取的高度不一致，获得数值不准确）
+        var carto = new Cesium.Cartographic.fromDegrees(118.1050887298584, 24.44900108337402);
+        var height = viewer.scene.globe.getHeight(carto);
+        alert("(118.105, 24.449)地形高度："+height+"米");
+      }
+
+      function getHeightByZoom(){
+        //方法2（根据坐标获取精准高度）
+        let cartographics= [Cesium.Cartographic.fromDegrees(118.1050887298584, 24.44900108337402)];
+        //14为terrainProvider中对应的级别，在不同级别，相同坐标下所获取的高度不一致。如果要精准度较高，该值应根据地形服务尽可能地大。
+        //sampleTerrain :   获取非精确的地形的高度
+        //sampleTerrainMostDetailed： 获取尽量精确的地形的高度
+        Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+          .then((updatedPositions)=>{
+            console.log("updatedPositions：",updatedPositions);
+            console.log("(118.105, 24.449)地形高度：",updatedPositions[0].height);
+            alert("(118.105, 24.449)地形高度："+updatedPositions[0].height+"米");
+          });
+
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+
+  <input type="button" value="获取(118.105, 24.449)地形高度（不推荐使用该方式）" onclick="getHeight()"
+         style="cursor:pointer;position:absolute;left:100px;top:50px;z-index:9999;background:blue;color:white;border:none;font-size:24px">
+  <input type="button" value="精准获取(118.105, 24.449)地形高度（加上地图级别）" onclick="getHeightByZoom()"
+         style="cursor:pointer;position:absolute;left:100px;top:100px;z-index:9999;background:blue;color:white;border:none;font-size:24px">
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"  style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig,
+            //地图加载完成回调方法
+            loadEndFun:"loadEnd"
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+        },
+        mounted(){
+
+        }
+    });
+</script>
+</body>
+</html>

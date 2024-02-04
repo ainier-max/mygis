@@ -1,0 +1,86 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script src="../../../map/vue-lib/mapjs/cesium/initMap.js"></script>
+
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      //初始化地图
+      initMap();
+      //定位
+      var obj = {lng:118.20914141845703, lat: 24.3400288818359375,eyeHeight:10000,pitch:-65,heading:0.0,time:1};
+      viewerFlyToLonLat(obj);
+
+      drawWater();
+    }
+
+
+
+    //绘制水面波浪效果
+    function drawWater() {
+      var polygon = viewer.scene.primitives.add(new Cesium.Primitive({
+        geometryInstances : new Cesium.GeometryInstance({
+          geometry : new Cesium.PolygonGeometry({
+            polygonHierarchy : new Cesium.PolygonHierarchy(
+              Cesium.Cartesian3.fromDegreesArray([
+                118.18714141845703,24.377288818359375,118.172721862792957,24.345016479492188,118.18164825439453,24.303817749023438, 118.25855255126953,24.2962646484375,118.25855255126953,24.366302490234375,118.18714141845703,24.377288818359375,
+              ])
+            ),
+            vertexFormat : Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
+          })
+        }),
+        appearance : new Cesium.EllipsoidSurfaceAppearance({
+          aboveGround : true,
+          material : new Cesium.Material({
+            fabric : {
+              type : 'Water',
+              uniforms : {
+                baseWaterColor:new Cesium.Color.AQUA.withAlpha(0.5),
+                normalMap:Cesium.buildModuleUrl('Assets/Textures/waterNormals.jpg'),
+                frequency: 1000.0,//频率
+                animationSpeed: 0.01,//动画速度
+                amplitude: 10//振幅
+              }
+            }
+          })
+        }),
+        show : true
+      }));
+
+
+
+    }
+
+
+  </script>
+</head>
+
+<body onload="loadEnd()">
+<div id="my-app">
+  <div id="map" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></div>
+
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+
+    },
+    components: {
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

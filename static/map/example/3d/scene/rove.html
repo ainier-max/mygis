@@ -1,0 +1,309 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+<!--  <script src="../../../map/vue-lib/vuejs/vue.js"></script>-->
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <style>
+    #mainRoleAngle{
+      width: 160px;
+      height:210px;
+      position: absolute;
+      left:10px;
+      top:10px;
+      background-color: white;
+      opacity: 0.8;
+      padding: 10px;
+      z-index: 9999;
+    }
+  </style>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //去掉地形
+      viewer.scene.terrainProvider = new Cesium.EllipsoidTerrainProvider({});
+      window.addEventListener('keydown',(e)=>{
+        setFlagStatus(e, true);
+      });
+      window.addEventListener('keyup',(e)=>{
+        setFlagStatus(e, false);
+      });
+      //window被聚焦
+      window.focus();
+      rove();
+      addBuilder();
+      var obj = {lng: 117.1937, lat: 39.1268,eyeHeight:100,pitch:-25};
+      viewerFlyToLonLat(obj);
+    }
+
+    var flyToEntity = null;
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          var flyToHeight=updatedPositions[0].height;
+          if(typeof(flyToHeight)=="undefined"){
+            updatedPositions.obj.height = 0;
+          }else{
+            updatedPositions.obj.height = flyToHeight;
+          }
+          console.log("地形高度：", updatedPositions.obj.height);
+          if (flyToEntity) {
+            viewer.entities.remove(flyToEntity);
+          }
+          flyToEntity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 0,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0.9),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+              outlineWidth: 0
+            }
+          });
+          viewer.entities.add(flyToEntity);
+          var flyPromise = viewer.flyTo(flyToEntity, {
+            duration: 0.5,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(0.0),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+        });
+    }
+
+    function addBuilder(){
+      var tileset = new Cesium.Cesium3DTileset({
+        url: 'http://10.254.10.38:8081/mapdata/3dtianjinnew/tileset.json',
+        modelMatrix: Cesium.Matrix4.fromArray([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+        maximumMemoryUsage: 100,//不可设置太高，目标机子空闲内存值以内，防止浏览器过于卡
+        maximumScreenSpaceError: 50,//用于驱动细节细化级别的最大屏幕空间错误;较高的值可提供更好的性能，但视觉质量较低。
+        shadows:false,//是否显示阴影
+        skipLevelOfDetail : true,
+        baseScreenSpaceError : 1024,
+        skipScreenSpaceErrorFactor : 16,
+        skipLevels : 1,
+        immediatelyLoadDesiredLevelOfDetail : false,
+        loadSiblings : false,
+        cullWithChildrenBounds : true,
+        dynamicScreenSpaceError : true,
+        dynamicScreenSpaceErrorDensity : 0.00278,
+        dynamicScreenSpaceErrorFactor : 4.0,
+        dynamicScreenSpaceErrorHeightFalloff : 0.25,
+        //maximumNumberOfLoadedTiles:100,
+      });
+      var Builder3d = mapVue.$refs.map.viewer.scene.primitives.add(tileset);
+    }
+
+    // 状态标志
+    var flag = {
+      moveUp:false,
+      moveDown:false,
+      moveLeft:false,
+      moveRight:false
+    };
+    var planePrimitive0;
+    var position0;
+    var hpRoll = new Cesium.HeadingPitchRoll();
+    var converter0;
+
+
+    function rove(){
+      var center = new Cesium.Cartesian3();
+      var hpRange = new Cesium.HeadingPitchRange();
+      position0 = Cesium.Cartesian3.fromDegrees(117.1937,39.1268,0);
+      converter0 =Cesium.Transforms.localFrameToFixedFrameGenerator('north', 'west');
+      planePrimitive0 = viewer.scene.primitives.add(Cesium.Model.fromGltf({
+        url : '../../../data/3dmodel/CesiumMan/Cesium_Man.gltf',
+        modelMatrix:Cesium.Transforms.headingPitchRollToFixedFrame(position0, hpRoll, Cesium.Ellipsoid.WGS84, converter0),
+        minimumPixelSize : 128,
+      }));
+
+      console.log("模型对象：",planePrimitive0);
+
+      var fromBehind = document.getElementById('fromBehind');
+      //旋转角度
+      var radian = Cesium.Math.toRadians(10.0);
+      viewer.clock.onTick.addEventListener((clock)=>{
+        //向前
+        if(flag.moveUp){
+          if(flag.moveLeft){
+            hpRoll.heading -= radian;
+          }
+          if(flag.moveRight){
+            hpRoll.heading += radian;
+          }
+          moveCar(true);
+        }
+        //向后
+        if(flag.moveDown){
+          if(flag.moveLeft){
+            hpRoll.heading -= radian;
+          }
+          if(flag.moveRight){
+            hpRoll.heading += radian;
+          }
+          moveCar(false);
+        }
+        //左转
+        if((flag.moveLeft)&&(!flag.moveDown)&&(!flag.moveUp)&&(!flag.moveRight)){
+          hpRoll.heading -= radian;
+          Cesium.Transforms.headingPitchRollToFixedFrame(position0, hpRoll, Cesium.Ellipsoid.WGS84,converter0,planePrimitive0.modelMatrix);
+        }
+        //右转
+        if((flag.moveRight)&&(!flag.moveDown)&&(!flag.moveUp)&&(!flag.moveLeft)){
+          hpRoll.heading += radian;
+          Cesium.Transforms.headingPitchRollToFixedFrame(position0, hpRoll, Cesium.Ellipsoid.WGS84,converter0,planePrimitive0.modelMatrix);
+        }
+
+        if((!flag.moveRight)&&(!flag.moveDown)&&(!flag.moveUp)&&(!flag.moveLeft)){
+          //console.log("四个键都没按");
+          planePrimitive0.readyPromise.then(function(model){
+            model.activeAnimations.addAll({
+                speedup : 1.0,
+                loop : Cesium.ModelAnimationLoop.REPEAT
+              }
+            )
+          });
+        }
+        if((flag.moveRight)||(flag.moveDown)||(flag.moveUp)||(flag.moveLeft)){
+          //console.log("方向键随便按");
+          planePrimitive0.readyPromise.then(function(model){
+            model.activeAnimations.add({
+              name:'animation_0'
+            })
+          });
+        }
+
+        if (fromBehind.checked) {
+          //第一视角，重新设置旋转角度
+          radian = Cesium.Math.toRadians(1.0);
+          planePrimitive0.readyPromise.then(function(model){
+            //console.log("模型已经准备好");
+            var r = 2.0 * Math.max(model.boundingSphere.radius, viewer.camera.frustum.near);
+            var centerGAI=new Cesium.Cartesian3();
+            centerGAI.z=planePrimitive0.boundingSphere.center.z+1;
+            Cesium.Matrix4.multiplyByPoint(planePrimitive0.modelMatrix, centerGAI, center);
+            hpRange.heading = hpRoll.heading;
+            hpRange.pitch = hpRoll.pitch;
+            hpRange.range = r * 4.0;
+            //console.log("center, hpRange:",center, hpRange);
+            viewer.camera.lookAt(center, hpRange);
+          });
+        }else{
+          //非第一视角，重新设置旋转角度
+          radian = Cesium.Math.toRadians(10.0);
+          //解除lookAt
+          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
+        }
+      });
+    }
+    // 根据键盘按键返回标志
+    function setFlagStatus(key,value) {
+      //console.log("key,value",key,value);
+      switch (key.keyCode){
+        case 65:
+          // 左
+          flag.moveLeft = value;
+          break;
+        case 87:
+          // 上
+          flag.moveUp = value;
+          break;
+        case 68:
+          // 右
+          flag.moveRight = value;
+          break;
+        case 83:
+          flag.moveDown = value;
+          // 下
+          break;
+      }
+    }
+    // 移动
+    var yy=1000;
+    function moveCar(isUP) {
+      // 速度
+      var speed = 1;
+      // 速度矢量
+      var speedVector = new Cesium.Cartesian3(0,0,0);
+      // 计算速度矩阵
+      if(isUP>0){
+        speedVector.x=speed;
+      }else{
+        speedVector.x=-speed;
+      }
+      var ellipsoid = viewer.scene.globe.ellipsoid;
+      var cartographic = ellipsoid.cartesianToCartographic(position0);
+      var lat = Cesium.Math.toDegrees(cartographic.latitude);
+      var lng = Cesium.Math.toDegrees(cartographic.longitude);
+      var height=cartographic.height;
+      speedVector.z=-height;
+      let cartographics= [Cesium.Cartographic.fromDegrees(lng, lat)];
+      Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions)=>{
+          //console.log("updatedPositions高度：",updatedPositions[0].height);
+          // 根据速度计算出下一个位置的坐标,并设置高度为0
+          Cesium.Matrix4.multiplyByPoint(planePrimitive0.modelMatrix ,speedVector, position0);
+          //重新设置高度
+          var cartographic = ellipsoid.cartesianToCartographic(position0);
+          var newlat = Cesium.Math.toDegrees(cartographic.latitude);
+          var newlng = Cesium.Math.toDegrees(cartographic.longitude);
+          var newheight=updatedPositions[0].height;
+          position0=Cesium.Cartesian3.fromDegrees(newlng, newlat, newheight);
+          // 移动
+          Cesium.Transforms.headingPitchRollToFixedFrame(position0, hpRoll, Cesium.Ellipsoid.WGS84,converter0,planePrimitive0.modelMatrix);
+
+          //viewer.camera.lookAtTransform(planePrimitive0.modelMatrix, new Cesium.Cartesian3(-50, 0, 10));
+
+        });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+
+  <div id="mainRoleAngle">
+    <p>W: 前进</p>
+    <p>A: 左转</p>
+    <p>S: 后退</p>
+    <p>D: 右转</p>
+    <span>开启第一视角</span>
+    <input id="fromBehind" type="checkbox">
+  </div>
+
+  <map-component  ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    },
+  });
+</script>
+</body>
+</html>

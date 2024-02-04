@@ -1,0 +1,70 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--axios依赖-->
+  <script src="../../../map/vue-lib/vuejs/axios.min.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+      function addXzqhTest() {
+          var param = {};
+          param.regioncode = "350203";//思明
+          //param.regioncode="350206";//湖里
+          mapVue.$refs.api.getRegionInfo(param, addXzqhCallBack);
+      }
+
+      function addXzqhCallBack(resp) {
+          console.log("行政区划查询结果", resp);
+          var zbc = resp.data[0].objects[0].zbc;
+          //console.log("wkt格式坐标串：",zbc);
+          //获得坐标串是wkt格式，需要进行转换Geojson
+          var param = {};
+          param.zbc = zbc;
+          mapVue.$refs.api.wktToGeojson(param, wktToGeojsonBack);
+      }
+
+      function wktToGeojsonBack(resp) {
+          //console.log("geojson格式坐标串：",resp);
+          //Geojson大数据格式上图
+          var zxqhlayer = mapVue.$refs.map.addPolygonByGeojson(resp.data.geojson);
+          window.mapBound = mapVue.$refs.map.getLayerBound(zxqhlayer);
+          //边框居中
+          console.log("边框:", window.mapBound);
+          mapVue.$refs.map.setCenterByBound(window.mapBound);
+      }
+
+  </script>
+</head>
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="mapid" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <api-component ref="api" :id="apiid" :axios="axios"></api-component>
+  <el-button type="primary" onclick='addXzqhTest();' style='z-index:1000;position:absolute;top:50px;left:50px'>画行政区划
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            mapid: "map",
+            apiid: "api",
+            type: "js",
+            config: window.defaultMapConfig,
+            axios: axios
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd'),
+             'api-component': httpVueLoader('../../vue-map-component/tools/api-component.vue', 'frontEnd'),
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

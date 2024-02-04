@@ -1,0 +1,59 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      function addPolylineTest() {
+          var polylineJSON = {};
+          polylineJSON.xys = [
+              [24.523887634277347, 118.14130783081056],
+              [24.49127197265625, 118.14302444458008],
+              [24.494361877441406, 118.16774368286133],
+              [24.517192840576172, 118.16619873046874]
+          ];
+          //线的样式
+          polylineJSON.option = {};
+          //线的宽度
+          polylineJSON.option.weight = 5;
+          //线的颜色
+          polylineJSON.option.color = "#f18";
+          var polyline = mapVue.$refs.map.addPolyline(polylineJSON);
+          console.log("polyline", polyline);
+
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addPolylineTest();' style='z-index:1000;position:absolute;top:50px;left:50px'>
+    添加polyline
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

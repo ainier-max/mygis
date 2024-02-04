@@ -1,0 +1,83 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+</head>
+<script>
+    function loadEnd(){
+        console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.viewer);
+        var viewer=mapVue.$refs.map.viewer;
+
+        // 纯色背景,Cesium.Color.TRANSPARENT透明
+        viewer.scene.globe.baseColor = Cesium.Color.TRANSPARENT;
+        //viewer.scene.globe.baseColor = Cesium.Color.BLUE;
+        //viewer.scene.backgroundColor = new Cesium.Color(255.0, 0.0, 0.0, 1);
+        viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
+
+        Cesium.Math.setRandomNumberSeed(0);  //设置随机数种子
+        var promise = Cesium.GeoJsonDataSource.load('../../../../static/data/xiamen.json'); //geojson面数据
+        promise.then(function(dataSource) {
+            viewer.dataSources.add(dataSource);
+            var entities = dataSource.entities.values;
+            var colorHash = {};
+            for (var i = 0; i < entities.length; i++) {
+                var entity = entities[i];
+                var name = entity.name;  //geojson里面必须得有一个name属性，entity.name对应
+                var color = colorHash[name]; //可以使两个同名要素使用同一种颜色。。。
+                if (!color) {
+                    color = Cesium.Color.fromRandom({
+                        alpha : 1
+                    });
+                    colorHash[name] = color;
+                }
+                //console.log("color",color);
+                entity.polygon.material = color;
+                entity.polygon.outline = false;
+                entity.polygon.extrudedHeight = 2000;
+                viewer.zoomTo(promise);
+            }
+        });
+
+        //关掉太空
+        viewer.scene.skyBox.show = false;
+        //关掉大气层
+        viewer.scene.skyAtmosphere.show = false;
+        //默认不加载地图
+        viewer.imageryLayers.get(0).show=false;
+        //地形透明设置
+        var extendGlobe = new Cesium.ExtendGlobe(viewer);
+        extendGlobe.terrainTransparent = true; // or false
+
+    }
+</script>
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :load-end="loadEndFun"  :config="config" style='background-color: rgb(9, 29, 82);z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.noMapConfig,
+            //地图加载完成回调方法
+            loadEndFun:"loadEnd"
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+        },
+        mounted(){
+
+        }
+    });
+</script>
+</body>
+</html>

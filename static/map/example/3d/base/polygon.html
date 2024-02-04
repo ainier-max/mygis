@@ -1,0 +1,69 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function addPolygon() {
+      var polygon = viewer.entities.add({
+        name: 'polygon',
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(
+            [
+              118.08336708922504, 24.460059477621492,
+              118.08661784282492, 24.44388550198702,
+              118.10353961223556, 24.449625366707494,
+              118.09575685696713, 24.46347023074697
+            ]),
+          material: Cesium.Color.GREENYELLOW.withAlpha(0.5)
+        }
+      });
+
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addPolygon();' style='z-index:1000;position:absolute;top:50px;left:60px'>面
+  </el-button>
+
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

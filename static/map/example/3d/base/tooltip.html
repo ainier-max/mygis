@@ -1,0 +1,219 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <style>
+    html, body, #cesiumContainer {
+      width: calc(100%);
+      height: calc(100%);
+      margin: 0;
+      padding: 0;
+    }
+
+    .cesium-popup {
+      position: absolute;
+      left: 0;
+      top: 5px;
+      text-align: left;
+    }
+
+    .cesium-popup-background {
+      background: rgba(0, 0, 0, .6);
+      border-radius: 6px;
+    }
+
+    .cesium-popup-content-wrapper {
+      text-align: center;
+      max-height: 600px;
+      overflow-y: auto;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, .4);
+      text-align: left;
+      border-radius: 3px;
+    }
+
+    .cesium-popup-color {
+      color: white;
+    }
+
+    .cesium-popup-content {
+      margin: 15px 10px 10px;
+      line-height: 1.4;
+      font-size: 13px;
+      max-width: 439px;
+      min-width: 50px;
+    }
+
+    .cesium-popup-tip-container {
+      margin: 0 auto;
+      width: 40px;
+      height: 13px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cesium-popup-tip {
+      box-shadow: 0 3px 14px rgba(0, 0, 0, .4);
+      width: 17px;
+      height: 17px;
+      padding: 1px;
+      margin: -10px auto 0;
+      -webkit-transform: rotate(45deg);
+      transform: rotate(45deg);
+    }
+
+    .cesium-popup-close-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 4px 4px 0 0;
+      text-align: center;
+      width: 18px;
+      height: 14px;
+      font: 16px/14px Tahoma, Verdana, sans-serif;
+      text-decoration: none;
+      font-weight: 700;
+      background: transparent;
+      z-index: 9999;
+    }
+
+    .cesium-popup-close-button:hover {
+      cursor: pointer;
+      color: #23527c;
+    }
+  </style>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //addToolTip();
+    }
+
+    /* 获取camera中心点坐标 */
+    function addToolTip() {
+      var obj = {};
+      obj.name = "东北大学";
+      obj.X = 118.08508872985841;
+      obj.Y = 24.439001083374023;
+      addFeature(obj);
+
+      var mouseClickEntitiesHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      mouseClickEntitiesHandler.setInputAction(function (movement) {
+        var pickMent = viewer.scene.pick(movement.endPosition);
+        var cartesian = null;
+        if (Cesium.defined(pickMent)) {
+          if (pickMent.id && pickMent.id.tooltip) {
+            var ray = viewer.scene.camera.getPickRay(movement.endPosition);
+            cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+            $('#tooltip-view').show()
+            $('#tooltip-content').empty()
+            $('#tooltip-content').append(pickMent.id.tooltip.html)
+            var x = movement.endPosition.x - ($('#tooltip-view').width()) / 2;
+            if (movement.endPosition.x >= document.getElementById('cesiumContainer').clientWidth - document.getElementById('tooltip-view').clientWidth) {
+              x = document.getElementById('cesiumContainer').clientWidth - document.getElementById('tooltip-view').clientWidth + pickMent.id.tooltip.anchor[0];
+            }
+            var y = movement.endPosition.y - ($('#tooltip-view').height()) + pickMent.id.tooltip.anchor[1];
+            $('#tooltip-view').css('transform', 'translate3d(' + x + 'px, ' + y + 'px, 0)');
+            viewer.scene.postRender.addEventListener(function () {
+              var changedC = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, cartesian);
+              // If things moved, move the popUp too
+              if (Cesium.defined(changedC)) {
+                var x = changedC.x - ($('#tooltip-view').width()) / 2 + pickMent.id.tooltip.anchor[0];
+                var y = changedC.y - ($('#tooltip-view').height()) + pickMent.id.tooltip.anchor[1];
+                $('#tooltip-view').css('transform', 'translate3d(' + x + 'px, ' + y + 'px, 0)');
+              }
+            })
+          }
+        } else {
+          $('#tooltip-content').empty();
+          $('#tooltip-view').hide();
+          //viewer.scene.postRender.removeEventListener();
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    }
+
+    function addFeature(obj) {
+
+      var html = '<table style="width: 200px;"><tr><th scope="col" colspan="4"  style="text-align:center;font-size:15px;">' + obj.name + '</th></tr> <tr><td >住用单位：</td><td >XX单位</td></tr><tr><td >建筑面积：</td><td >43平方米</td></tr><tr><td >建筑层数：</td><td >2</td></tr><tr><td >建筑结构：</td><td >钢混</td></tr><tr><td >建筑年份：</td><td >2006年</td></tr><tr><td colspan="4" style="text-align:right;"><a style="color:aqua;" href="javascript:showXQ()">详情</a></td></tr></table>';
+
+      viewer.entities.add({
+        name: obj.name,
+        position: Cesium.Cartesian3.fromDegrees(obj.X, obj.Y),
+        point: {
+          color: new Cesium.Color.fromCssColorString("#ff0000"),
+          pixelSize: 10,
+          outlineColor: new Cesium.Color.fromCssColorString("#ffffff"),
+          outlineWidth: 2,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        },
+        label:{
+            text: obj.name,
+            font: "16px Helvetica",
+            style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+            fillColor:Cesium.Color.AZURE,
+            outlineColor:Cesium.Color.BLACK,
+            outlineWidth:2,
+            horizontalOrigin:Cesium.HorizontalOrigin.CENTER,
+            verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset:new Cesium.Cartesian2(0,-10),
+            heightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,
+            distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,2e6)
+        },
+        data: obj,
+        tooltip: {html: html, anchor: [0, -12]}
+      });
+    }
+
+    function showXQ() {
+      alert("点击了详情");
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <!-- 消息提示框气泡 -->
+  <div id="tooltip-view" class="cesium-popup" style="z-index:9999;transform: translate3d(364.5px, 338px, 0px);display:none;">
+    <a class="cesium-popup-close-button cesium-popup-color"
+       onclick="document.getElementById('tooltip-view').style.display='none';">×</a>
+    <div class="cesium-popup-background" style="padding: 1px 0;">
+      <div id="tooltip-content" class="cesium-popup-content cesium-popup-color"></div>
+    </div>
+    <div class="cesium-popup-tip-container">
+      <div class="cesium-popup-tip  cesium-popup-background"></div>
+    </div>
+  </div>
+  <el-button type="primary" onclick='addToolTip();' style='z-index:1000;position:absolute;top:50px;left:60px'>上点并绑定tooltip
+  </el-button>
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "cesiumContainer",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

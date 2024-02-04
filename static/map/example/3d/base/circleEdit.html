@@ -1,0 +1,245 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+
+  <script src="../../../map/vue-lib/mapjs/cesium/initMap.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      //初始化地图
+      initMap();
+      //定位
+      var obj = {lng:118.0850887298584, lat: 24.439001083374023,eyeHeight:5000,pitch:-65,heading:0.0,time:1};
+      viewerFlyToLonLat(obj);
+    }
+
+    //可编辑圆
+    var circleEntity=null;
+    function addCircle(){
+      circleEntity=new Cesium.Entity({
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023),
+        name:"editCircle",
+        ellipse: {
+          semiMinorAxis: 1500.0,//椭圆短轴（单位米）
+          semiMajorAxis: 1500.0,//椭圆长轴（单位米）
+          outline: true,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 4,
+          material: Cesium.Color.GREENYELLOW.withAlpha(0.5),
+        },
+      });
+      viewer.entities.add(circleEntity);
+    }
+
+    //当前编辑点
+    var currentPoint = null;
+    //所有编辑点
+    var pointsId = [];
+    //事件
+    var handler = null;
+    //当前编辑对象
+    var editObj = null;
+    //当时是否是编辑状态
+    var isEditting = false;
+
+    //经度1度=101194米
+    var degreeMeter=101194;
+
+    function editCircle() {
+      document.getElementById("map").style.cursor = "pointer";
+      //去掉双击事件
+      viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+      isEditting = false;
+      handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      //鼠标点击事件
+      handler.setInputAction((event) => {
+        let windowPosition = event.position;
+        let pickedObject = viewer.scene.pick(windowPosition);
+        if (Cesium.defined(pickedObject)) {
+          let entity = pickedObject.id;
+          if (entity.name === "editCircle" && !isEditting) {
+            editObj = entity;
+            //获取圆心与半径
+            var circle_center_cartesian=editObj.position.getValue(Cesium.JulianDate.now());
+            var circleRadius=editObj.ellipse.semiMinorAxis.getValue();
+            console.log("可编辑圆的圆心：",circle_center_cartesian);
+            console.log("可编辑圆的半径：",circleRadius);
+            //生成圆心编辑点
+            var centerEditPoint = viewer.entities.add({
+              name: "circle_point",
+              position: circle_center_cartesian,
+              point: {
+                color: Cesium.Color.RED,
+                pixelSize: 10,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 1,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,//贴地
+              }
+            });
+            centerEditPoint.flag = "centerPoint";
+            pointsId.push(centerEditPoint.id);
+            //生成圆边编辑点
+            //圆半径换成米
+            var degreeTemp=circleRadius/degreeMeter;//该值在不同的纬度上不同的值，可以根据自己的情况进行调整
+            //获取圆心（经度）
+            var ellipsoid = viewer.scene.globe.ellipsoid;
+            var cartographic = ellipsoid.cartesianToCartographic(circle_center_cartesian);
+            var circleCenterLng = Cesium.Math.toDegrees(cartographic.longitude);
+            var circleCenterLat = Cesium.Math.toDegrees(cartographic.latitude);
+            //获取圆边经纬度
+            var circleBorderCartesian=Cesium.Cartesian3.fromDegrees(circleCenterLng+degreeTemp, circleCenterLat, 0);
+            var circle_border_point = viewer.entities.add({
+              name: "circle_point",
+              position: circleBorderCartesian,
+              point: {
+                color: Cesium.Color.WHITE,
+                pixelSize: 10,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 1,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,//贴地
+              }
+            });
+            circle_border_point.flag = "borderPoint";
+            pointsId.push(circle_border_point.id);
+            //var d = Cesium.Cartesian3.distance(circle_center_cartesian, circle_border_cartesian);
+            //进入编辑状态
+            isEditting = true;
+            //禁止地图的鼠标操作
+            viewer.scene.screenSpaceCameraController.enableRotate = false;
+            viewer.scene.screenSpaceCameraController.enableZoom = false;
+          } else if (entity.name === "circle_point") {
+            currentPoint = entity;
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+
+      // 对鼠标移动事件的监听
+      handler.setInputAction((event) => {
+        if (isEditting && currentPoint && currentPoint.name == "circle_point") {
+          //获取加载地形后对应的经纬度和高程：地标坐标
+          var ray = viewer.camera.getPickRay(event.endPosition);
+          var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+          if (!cartesian) {
+            return;
+          }
+          //更新当前点的位置
+          currentPoint.position = cartesian;
+          //移动的是半径点，则更新半径
+          if(currentPoint.flag=="borderPoint"){
+            var centerTemp = viewer.scene.globe.ellipsoid.cartesianToCartographic(editObj.position.getValue(Cesium.JulianDate.now()));
+            var radiusTemp = viewer.scene.globe.ellipsoid.cartesianToCartographic(currentPoint.position.getValue(Cesium.JulianDate.now()));
+            var geodesic = new Cesium.EllipsoidGeodesic();
+            geodesic.setEndPoints(centerTemp, radiusTemp);
+            var radius = geodesic.surfaceDistance;
+            editObj.ellipse.semiMinorAxis=new Cesium.CallbackProperty(function (time,result){
+              return radius;
+            },false);
+            editObj.ellipse.semiMajorAxis=new Cesium.CallbackProperty(function (time,result){
+              return radius;
+            },false);
+          }
+          //移动的是圆中心，则更新圆中心
+          if(currentPoint.flag=="centerPoint"){
+             //更新圆边编辑点
+             var circleRadius=editObj.ellipse.semiMinorAxis.getValue();
+             //圆半径换成米
+             var degreeTemp=circleRadius/degreeMeter;//该值在不同的纬度上不同的值，可以根据自己的情况进行调整
+             //获取圆心（经度）
+             var ellipsoid = viewer.scene.globe.ellipsoid;
+             var cartographic = ellipsoid.cartesianToCartographic(currentPoint.position.getValue(Cesium.JulianDate.now()));
+             var circleCenterLng = Cesium.Math.toDegrees(cartographic.longitude);
+             var circleCenterLat = Cesium.Math.toDegrees(cartographic.latitude);
+             //获取圆边经纬度
+             var circleBorderCartesian=Cesium.Cartesian3.fromDegrees(circleCenterLng+degreeTemp, circleCenterLat, 0);
+             for (var i = 0; i < pointsId.length; i++) {
+              var entityTemp=viewer.entities.getById(pointsId[i]);
+              if(entityTemp.flag=="borderPoint"){
+                //console.log("circleBorderCartesian:",circleBorderCartesian);
+                entityTemp.position = circleBorderCartesian;
+              }
+            }
+            //更新圆中心点
+            var positionTemp=currentPoint.position.getValue(Cesium.JulianDate.now());
+            editObj.position = new Cesium.CallbackProperty(function (time, result) {
+              return positionTemp;
+            }, false);
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+      // 对鼠标抬起事件的监听
+      handler.setInputAction((event) => {
+        //isEditting = false;
+        currentPoint = undefined;
+      }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+    }
+
+    function endEditCircle() {
+      viewer.scene.screenSpaceCameraController.enableRotate = true;
+      viewer.scene.screenSpaceCameraController.enableZoom = true;
+      if (handler !== null && !handler.isDestroyed()) {
+        handler.destroy();
+      }
+      for (let id of pointsId) {
+        viewer.entities.removeById(id);
+      }
+      pointsId = [];
+      //获取圆心与半径
+      var circle_center_cartesian=editObj.position.getValue(Cesium.JulianDate.now());
+      var ellipsoid = viewer.scene.globe.ellipsoid;
+      var cartographic = ellipsoid.cartesianToCartographic(circle_center_cartesian);
+      var lat = Cesium.Math.toDegrees(cartographic.latitude);
+      var lng = Cesium.Math.toDegrees(cartographic.longitude);
+      var height = cartographic.height;
+      console.log("圆中心点：");
+      console.log("经度："+lng + ",纬度："+ + lat + ",高度：" + height);
+      var circleRadius=editObj.ellipse.semiMinorAxis.getValue();
+      console.log("圆半径：",circleRadius+"米");
+      editObj = null;
+      //鼠标变成默认
+      document.getElementById("map").style.cursor = "default";
+    }
+  </script>
+</head>
+
+<body  onload="loadEnd()">
+<div id="my-app">
+  <el-button type="primary" onclick='addCircle();' style='z-index:1000;position:absolute;top:50px;left:60px'>添加可编辑圆
+  </el-button>
+
+
+  <el-button type="primary" onclick='editCircle();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    鼠标选中可编辑圆进入编辑
+  </el-button>
+
+  <el-button type="primary" onclick='endEditCircle();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    可编辑圆结束编辑
+  </el-button>
+
+
+  <div id="map" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></div>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+
+    },
+    components: {
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

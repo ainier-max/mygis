@@ -1,0 +1,144 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <style>
+    .leaflet-pulsing-icon {
+      border-radius: 100%;
+      box-shadow: 1px 1px 8px 0 rgba(0,0,0,0.75);
+    }
+
+    .leaflet-pulsing-icon:after {
+      content: "";
+      -webkit-border-radius: 100%;
+      border-radius: 100%;
+      height: 400%;
+      width: 400%;
+      position: absolute;
+      margin: -150% 0 0 -150%;
+    }
+
+    @keyframes pulsate {
+      0% {
+        transform: scale(0.1, 0.1);
+        opacity: 0;
+        -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+        filter: alpha(opacity=0);
+      }
+      50% {
+        opacity: 1;
+        -ms-filter: none;
+        filter: none;
+      }
+      100% {
+        transform: scale(1.2, 1.2);
+        opacity: 0;
+        -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+        filter: alpha(opacity=0);
+      }
+    }
+    .water {
+      background-color: yellow;
+    }
+    .water:after {
+      box-shadow: 0 0 6px 2px yellow;
+      animation: pulsate 2s ease-out;
+      animation-iteration-count: infinite;
+      animation-delay: 0.1;
+    }
+
+  </style>
+  <script>
+      var viewer=null;
+      function loadEnd(){
+          console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.viewer);
+        viewer=mapVue.$refs.map.viewer;
+          var terrainLayer = new Cesium.CesiumTerrainProvider({
+            //url: "http://10.254.10.38/terrain",//部分
+            url: "http://data.marsgis.cn/terrain",
+          });
+        viewer.scene.terrainProvider = terrainLayer;
+        //定位
+        var obj = {lng:118.0850887298584, lat: 24.439001083374023,eyeHeight:5000,pitch:-30,heading:0.0,time:1};
+        mapVue.$refs.map.viewerFlyToLonLat(obj);
+      }
+
+      function addHtml() {
+        var obj = {
+          lng: 118.0850887298584,
+          lat: 24.439001083374023
+        };
+        let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+        cartographics.obj = obj;
+        Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+          .then((updatedPositions) => {
+            console.log("高度：", updatedPositions[0].height);
+            updatedPositions.obj.height = updatedPositions[0].height;
+            addPopup(updatedPositions.obj);
+          });
+      }
+
+      /**
+       * 叠加气泡框
+       * @param obj
+       */
+      function addPopup(obj){
+        var htmlOverlay = document.getElementById("water");
+        htmlOverlay.style.display = "block";
+        console.log("htmlOverlay对象：",htmlOverlay);
+        console.log("htmlOverlay高度：",htmlOverlay.offsetHeight);
+        console.log("htmlOverlay宽度：",htmlOverlay.offsetWidth);
+        var scratch = new Cesium.Cartesian2();
+        viewer.scene.postRender.addEventListener(function () {
+          var position = Cesium.Cartesian3.fromDegrees(obj.lng, obj.lat, obj.height);
+          var canvasPosition = viewer.scene.cartesianToCanvasCoordinates(
+            position,
+            scratch
+          );
+          if (Cesium.defined(canvasPosition)) {
+            htmlOverlay.style.top = canvasPosition.y - htmlOverlay.offsetHeight + "px";
+            htmlOverlay.style.left = canvasPosition.x - htmlOverlay.offsetWidth/2 + "px";
+          }
+        });
+      }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+
+  <input type="button" value="叠加波纹点" onclick="addHtml()"  style="position:absolute;left:50px;top:50px;background: blue;color:white;z-index: 9999;font-size: 24px"/>
+  <!--开启事件穿透-->
+  <div id="water" class="leaflet-marker-icon leaflet-pulsing-icon water"  style="margin-top:10px;pointer-events: none;z-index:9999;position: absolute;display:none; width: 20px; height: 20px; "></div>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"  style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig,
+            //地图加载完成回调方法
+            loadEndFun:"loadEnd"
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+        },
+        mounted(){
+
+        }
+    });
+</script>
+</body>
+</html>

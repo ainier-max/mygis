@@ -1,0 +1,93 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      function addParallelLinesDashTest(){
+          var xys=[
+              [24.566209411621094,118.0913543701172],[24.524917602539062,118.11332702636719],[24.512557983398438,118.18405151367189],[24.463462829589847,118.16722869873047]
+          ];
+
+          var polylineJSON = {};
+          polylineJSON.xys = xys;
+          polylineJSON.option = {};
+          polylineJSON.option.weight = 2;
+          polylineJSON.option.color = "black";
+          var polyline = mapVue.$refs.map.addPolyline(polylineJSON);
+          console.log("原线:", polyline);
+
+
+          var polylineJSON1={};
+          polylineJSON1.xys=xys;
+          polylineJSON1.option = {};
+          polylineJSON1.option.weight=2;
+          polylineJSON1.option.color="red";
+          polylineJSON1.option.offset=7;
+          polylineJSON1.option.dashArray="6,6";
+          var polyline1 = mapVue.$refs.map.addParallelPolyline(polylineJSON1);
+          console.log("平行线1:", polyline1);
+          //给线加箭头
+          var iconJson1 = {};
+          iconJson1.option = {};
+          iconJson1.option.iconUrl = "../images/plane.png";
+          iconJson1.option.iconAnchor = [10, 10];
+          iconJson1.option.iconSize=[20, 20];
+          var markerIcon1 = mapVue.$refs.map.createIcon(iconJson1);
+          polyline1.icon=markerIcon1;
+          var markers1 = mapVue.$refs.map.addDirectionIcon(polyline1);
+
+
+
+          var polylineJSON2={};
+          polylineJSON2.xys=xys;
+          polylineJSON2.option = {};
+          polylineJSON2.option.weight=2;
+          polylineJSON2.option.color="blue";
+          polylineJSON2.option.offset=-7;
+          var polyline2 = mapVue.$refs.map.addParallelPolyline(polylineJSON2);
+          console.log("平行线2:", polyline2);
+          //给线加箭头
+          var iconJson2 = {};
+          iconJson2.option = {};
+          iconJson2.option.iconUrl = "../images/plane.png";
+          iconJson2.option.iconAnchor = [10, 10];
+          iconJson2.option.iconSize=[20, 20];
+          var markerIcon2 = mapVue.$refs.map.createIcon(iconJson2);
+          polyline2.icon=markerIcon2;
+          var markers2 = mapVue.$refs.map.addDirectionIcon(polyline2);
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addParallelLinesDashTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    平行线
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            //'map-component': httpVueLoader('leaflet', 'backEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

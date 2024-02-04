@@ -1,0 +1,72 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function add() {
+      var points = [{lng: 118.1044813816513, lat: 24.451483144361173}, {
+        lng: 118.0850887298584,
+        lat: 24.439001083374023
+      }];
+      for (var i = 0; i < points.length; i++) {
+        addBillboard(points[i]);
+      }
+    }
+
+    function addBillboard(obj) {
+      var entity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(obj.lng, obj.lat),
+        billboard: {
+          image: '../images/add.png',
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          //500以内，大小为2倍，500-5000为大小2倍到0.5的渐变调整，5000以上大小为0.5大
+          scaleByDistance: new Cesium.NearFarScalar(500, 2, 5000, 0.5),
+          //500以内，透明度为0.5，500-5000为透明度1到0.5的渐变调整，5000以上透明度为1
+          translucencyByDistance: new Cesium.NearFarScalar(500,0.5,5000,1),
+        }
+      });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='add();' style='z-index:1000;position:absolute;top:50px;left:60px'>广告牌
+  </el-button>
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

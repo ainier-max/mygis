@@ -1,0 +1,88 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <!--vue依赖-->
+    <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+    <!--elementui依赖-->
+    <script src="../../../map/vue-lib/elementjs/index.js"></script>
+    <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+    <!--地图依赖js-->
+    <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+    <!--地图配置文件-->
+    <script src="../../../map/vue-lib/mapConfig.js"></script>
+    <script>
+
+      window.editCircle=null;
+      function addCircleTest(){
+        var circleJson={};
+        //圆心
+        circleJson.xy= [24.522422570142833,118.11471659369913];
+        circleJson.option={};
+        //圆半径
+        circleJson.option.radius=2000;//单位米
+        //边界线颜色
+        circleJson.option.color="#ff0000";
+        //填充颜色
+        circleJson.option.fillColor="#f18";
+        //透明度
+        circleJson.option.fillOpacity=0.5;
+        window.editCircle=mapVue.$refs.map.addCircle(circleJson);
+      }
+
+      /**
+       * 编辑原型
+       */
+      function startEditCircleTest(){
+        console.log("圆形进入编辑模式");
+        mapVue.$refs.map.startEditCircle(window.editCircle);
+        document.getElementById("radius").value=window.editCircle.radius;
+        document.getElementById("centerPoint").value=window.editCircle.centerPoint;
+      }
+
+      /**
+       * 结束编辑矩形
+       */
+      function endEditCircleTest(){
+        console.log("圆形结束编辑模式");
+        var newCircle=mapVue.$refs.map.endEditCircle(window.editCircle);
+        document.getElementById("radius").value=newCircle.radius;
+        document.getElementById("centerPoint").value=newCircle.centerPoint;
+      }
+
+
+    </script>
+  </head>
+  <body>
+    <!--JS版地图接入步骤3：搭建VUE组件元素-->
+    <div id="my-app">
+	     <!--
+      type：类型[js,vue]
+      config：地图配置信息
+      -->
+       <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+      <el-button type="primary" onclick='addCircleTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>编辑测试圆</el-button>
+      <el-button type="primary" onclick='startEditCircleTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>进入编辑</el-button>
+      <el-button type="primary" onclick='endEditCircleTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>结束编辑</el-button>
+
+      <el-input type="textarea"  :rows="1"
+                id="radius" placeholder="半径" style='z-index:1000;position:absolute;top:200px;left:60px;width: 350px'></el-input>
+      <el-input type="textarea"  :rows="1"
+                id="centerPoint" placeholder="圆心" style='z-index:1000;position:absolute;top:250px;left:60px;width: 350px'></el-input>
+    </div>
+	<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+      el: '#my-app',
+      data: {
+        id:"map",
+        type:"js",
+        config: window.defaultMapConfig
+      },
+      components: {
+          'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+      }
+    });
+	</script>
+  </body>
+</html>
+  <!--编辑代码end-->

@@ -1,0 +1,244 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    //初始定位
+    var locationObj={lng: 118.0850887298584, lat: 24.599001083374023, eyeHeight: 50000, pitch: -20, heading: 0.0, time: 3};
+    function loadBefore(){
+      console.log("地图加载之前的调用");
+      //滤镜invert
+      Cesium.Ion.mapFilter={};
+      Cesium.Ion.mapFilter.flag=true;
+      Cesium.Ion.mapFilter.value=1.0;//1.0以上
+    }
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      viewer.scene.fxaa = true;
+      viewer.scene.postProcessStages.fxaa.enabled = true;
+      viewerFlyToLonLat(locationObj);
+    }
+
+    function getData(){
+      window.setTimeout(StartRotate, 10000 );//10秒后自动旋转
+      var mapData=[
+        {areaName:"海沧区",x:117.97507741094263,y:24.531081701404073,count:421},
+        {areaName:"湖里区",x:118.14391186612597,y:24.52014598684515,count:652},
+        {areaName:"集美区",x:118.0195185317011,y:24.636984008876173,count:700},
+        {areaName:"思明区",x:118.10605729137768,y:24.465944855148653,count:259},
+        {areaName:"同安区",x:118.10489264045972,y:24.775833827403893,count:1030},
+        {areaName:"翔安区",x:118.27120024921295,y:24.668628934619804,count:850},
+      ];
+      var maxHeight = 15000;
+      var time=10;//柱状图10秒加载完
+      var maxValue = 0;
+      for (var i = 0; i < mapData.length; i++) {
+        if (maxValue < mapData[i].count) {
+          maxValue = mapData[i].count;
+        }
+      }
+      console.log("maxValue", maxValue);
+      var xs = maxHeight / maxValue;
+      for (var i = 0; i < mapData.length; i++) {
+        mapData[i].xs = xs;
+        mapData[i].time = time;
+        mapData[i].index=i;
+        addBar(mapData[i]);
+      }
+    }
+
+    //动态柱状图
+    function addBar(obj) {
+      console.log("obj:", obj);
+      var positions = [
+        obj.x - 0.01, obj.y - 0.01, obj.x - 0.01, obj.y + 0.01,
+        obj.x + 0.01, obj.y + 0.01, obj.x + 0.01, obj.y - 0.01,
+      ];
+      //初始高度
+      var waterHeight = 0;
+      var entity = viewer.entities.add({
+        id:"polygon"+obj.index,
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(positions),
+          material: Cesium.Color.YELLOW.withAlpha(1),
+          extrudedHeight: new Cesium.CallbackProperty(function () {
+            return waterHeight;
+          }, false),
+          //zIndex:-100
+        }
+      });
+      //Cesium.Cartesian3.fromDegrees(obj.x,obj.y,0),
+      var labelEntity = viewer.entities.add({
+        position: new Cesium.CallbackProperty(function () {
+          var cartesianTemp=Cesium.Cartesian3.fromDegrees(obj.x,obj.y,waterHeight+1200);
+          return cartesianTemp;
+        }, false),//obj.areaName
+        label : {
+          text : new Cesium.CallbackProperty(function () {
+            var str="";
+            if (waterHeight < obj.count*obj.xs) {
+              var str=obj.areaName+":"+Math.floor(waterHeight/obj.xs)+"起";
+            }else{
+              str=obj.areaName+":"+obj.count+"起";
+            }
+            return str;
+          }, false),
+          font : '14pt monospace',
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          eyeOffset: new Cesium.Cartesian3(0, 0, -10),
+          outlineWidth : 2,
+          fillColor:Cesium.Color.BLACK,//字体颜色
+          backgroundColor:Cesium.Color.AQUA,//背景颜色
+          showBackground:true,//是否显示背景颜色
+          verticalOrigin : Cesium.VerticalOrigin.TOP,
+          horizontalOrigin :Cesium.HorizontalOrigin.CENTER,//水平位置
+          pixelOffset:new Cesium.Cartesian2(0,-25)//偏移
+        }
+      });
+
+      viewer.clock.onTick.addEventListener(function () {
+        if (waterHeight < obj.count*obj.xs) {
+          waterHeight = waterHeight + 100;
+        }
+      });
+
+    }
+
+
+
+    var flyToEntity = null;
+
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          var flyToHeight = updatedPositions[0].height;
+          if (typeof (flyToHeight) == "undefined") {
+            updatedPositions.obj.height = 0;
+          } else {
+            updatedPositions.obj.height = flyToHeight;
+          }
+          console.log("地形高度：", updatedPositions.obj.height);
+          if (flyToEntity) {
+            viewer.entities.remove(flyToEntity);
+          }
+          flyToEntity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 0,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0),
+              outlineWidth: 0
+            }
+          });
+          viewer.entities.add(flyToEntity);
+          var flyPromise = viewer.flyTo(flyToEntity, {
+            duration: updatedPositions.obj.time,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(updatedPositions.obj.heading),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+          // 飞行完后，移除 markerXY，否则，不能完成飞行。
+          flyPromise.then(function (flyPromise) {
+            //查询数据
+            getData();
+          }).otherwise(function (error) {
+            console.log(error);
+          });
+        });
+    }
+
+
+    function StartRotate() {
+      var options = {
+        lng: locationObj.lng,
+        lat: locationObj.lat,
+        height: 0,
+        heading: 0.0,
+        pitch: locationObj.pitch,
+        roll: 0.0
+      };
+      var position = Cesium.Cartesian3.fromDegrees(options.lng, options.lat, options.height);
+      // 相机看点的角度，如果大于0那么则是从地底往上看，所以要为负值，这里取-30度
+      var pitch = Cesium.Math.toRadians(options.pitch);
+      // 给定飞行一周所需时间，比如20s, 那么每秒转动度数
+      var angle = 360 / 60;//每秒转动角度,该设置需要转动20秒才一周
+      // 给定相机距离点多少距离飞行，这里取值为5000m
+      var distance = locationObj.eyeHeight;
+      var startTime = Cesium.JulianDate.fromDate(new Date());
+
+      //只旋转10秒
+      var stopTime = Cesium.JulianDate.addSeconds(startTime, 360, new Cesium.JulianDate());
+      viewer.clock.stopTime = stopTime.clone();     // 结速时间
+
+      viewer.clock.startTime = startTime.clone();  // 开始时间
+      viewer.clock.currentTime = startTime.clone(); // 当前时间
+      viewer.clock.clockRange = Cesium.ClockRange.CLAMPED; // 行为方式
+      viewer.clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK; // 时钟设置为当前系统时间; 忽略所有其他设置。
+      // 相机的当前heading
+      var initialHeading = viewer.camera.heading;
+      var Exection = function TimeExecution() {
+        // 当前已经过去的时间，单位s
+        var delTime = Cesium.JulianDate.secondsDifference(viewer.clock.currentTime, viewer.clock.startTime);
+        var heading = Cesium.Math.toRadians(delTime * angle) + initialHeading;
+        viewer.scene.camera.setView({
+          destination: position, // 点的坐标
+          orientation: {
+            heading: heading,
+            pitch: pitch,
+
+          }
+        });
+        viewer.scene.camera.moveBackward(distance);
+        //console.log("viewer.clock.currentTime",viewer.clock.currentTime);
+        //console.log("viewer.clock.stopTime:",viewer.clock.stopTime);
+        if (Cesium.JulianDate.compare(viewer.clock.currentTime, viewer.clock.stopTime) >= 0) {
+          viewer.clock.onTick.removeEventListener(Exection);
+        }
+      };
+      viewer.clock.onTick.addEventListener(Exection);
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-before="loadBeforeFun" :load-end="loadEndFun" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.baiduOnlineMidNightMapConfig,
+      //地图加载之前的回调方法
+      loadBeforeFun: "loadBefore",
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted(){
+
+    }
+  });
+</script>
+</body>
+</html>

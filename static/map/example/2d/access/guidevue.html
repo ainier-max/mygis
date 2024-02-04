@@ -1,0 +1,116 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <script src="../../../codemirror/codemirror.js"></script>
+</head>
+
+<body style="background-color: rgb(249 249 249);">
+
+<div id="guide-app">
+
+    <div style="height: 100%;width: 100%;">
+      <div style="padding-left: 30px;padding-right: 30px;color:#666">
+        <p>1.加载所依赖的JS库（index.html文件添加）</p>
+        <textarea style="width: 1000px;background-color: rgb(249 249 249);color:#666" rows="3" readonly="readonly" class="form-control" id="code3">
+  <!--地图依赖js-->
+  <script src="panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="mapConfig.js"></script>
+        </textarea>
+
+        <p>2.搭建VUE组件元素</p>
+        <textarea style="width: 1000px;background-color: rgb(249 249 249);color:#666" rows="3" readonly="readonly" class="form-control" id="code4">
+
+     <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+    </textarea>
+        <p>3.引入地图组件</p>
+        <textarea style="width: 1000px;background-color: rgb(249 249 249);color:#666" rows="21" readonly="readonly" class="form-control" id="code5">
+    <script>
+      export default {
+        name: "demo",
+        props: {},
+        data() {
+          return {
+            id:"map",
+            type:"vue",
+            config: window.fangzhengMapConfig
+          }
+        },
+        components: {
+            'map-component': httpVueLoader('vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+      }
+    </script>
+    </textarea>
+      </div>
+
+
+    </div>
+</div>
+
+
+
+
+
+<script>
+
+  var mixedMode = {
+    name: "htmlmixed",
+    scriptTypes: [{matches: /\/x-handlebars-template|\/x-mustache/i,
+      mode: null},
+      {matches: /(text|application)\/(x-)?vb(a|script)/i,
+        mode: "vbscript"}]
+  };
+
+
+
+
+  var editor3 = CodeMirror.fromTextArea(document.getElementById("code3"), {
+    mode: mixedMode,
+    selectionPointer: true,
+    lineNumbers: true,	//显示行号
+    theme: "dracula",	//设置主题
+    lineWrapping: true,	//代码折叠
+    foldGutter: true,
+    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+    matchBrackets: true,	//括号匹配
+  });
+  console.log("高度",window.screen.availHeight );
+  editor3.setSize('70%', 90);     //设置代码框的长宽
+
+
+  var editor4 = CodeMirror.fromTextArea(document.getElementById("code4"), {
+    mode: mixedMode,
+    selectionPointer: true,
+    lineNumbers: true,	//显示行号
+    theme: "dracula",	//设置主题
+    lineWrapping: true,	//代码折叠
+    foldGutter: true,
+    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+    matchBrackets: true,	//括号匹配
+  });
+  console.log("高度",window.screen.availHeight );
+  editor4.setSize('70%', 60);     //设置代码框的长宽
+
+
+  var editor5 = CodeMirror.fromTextArea(document.getElementById("code5"), {
+    mode: mixedMode,
+    selectionPointer: true,
+    lineNumbers: true,	//显示行号
+    theme: "dracula",	//设置主题
+    lineWrapping: true,	//代码折叠
+    foldGutter: true,
+    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+    matchBrackets: true,	//括号匹配
+  });
+  console.log("高度",window.screen.availHeight );
+  editor5.setSize('70%', 270);     //设置代码框的长宽
+
+
+
+
+</script>
+
+</body>
+</html>
+

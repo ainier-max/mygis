@@ -1,0 +1,84 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      /**
+       * 单点居中
+       */
+      function centerTest() {
+          var markerJSON = {};
+          //xy坐标
+          markerJSON.xy = [24.422422570142833, 118.11471659369913];
+          //绝对路径
+          markerJSON.iconUrl = "../images/poi.png";
+          //图片偏移（坐标固定在图标的哪个点，[0,0]表示图标的左上角）
+          markerJSON.iconAnchor = [21, 17];
+          //图片大小
+          markerJSON.width = 42;
+          markerJSON.height = 34;
+          var marker = mapVue.$refs.map.addMarker(markerJSON);
+          console.log("图标对象", marker);
+          mapVue.$refs.map.panTo([24.422422570142833, 118.11471659369913]);
+      }
+
+      /**
+       * 级别缩放
+       */
+      function zoomTest() {
+          mapVue.$refs.map.zoomTo(14);
+      }
+
+      /**
+       * 地图缩放并居中
+       */
+      function zoomAndCenterTest() {
+          mapVue.$refs.map.setView([24.422422570142833, 118.11471659369913], 14);
+      }
+
+      //地图重新初始化
+      function initMapTest() {
+          mapVue.$refs.map.loadMap();
+      }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='centerTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>单点居中
+  </el-button>
+  <el-button type="primary" onclick='zoomTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>级别缩放
+  </el-button>
+  <el-button type="primary" onclick='zoomAndCenterTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    缩放并居中
+  </el-button>
+  <el-button type="primary" onclick='initMapTest();' style='z-index:1000;position:absolute;top:200px;left:50px'>重新初始化
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig,
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

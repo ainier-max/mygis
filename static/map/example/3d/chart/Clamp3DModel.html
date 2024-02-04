@@ -1,0 +1,159 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer=null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      var scene = viewer.scene;
+      scene.globe.depthTestAgainstTerrain = true;
+    }
+
+    function start(){
+      var lng=118.1038;
+      var lat=24.4528;
+
+      var scene = viewer.scene;
+      var entity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(lng, lat),
+        model: {
+          //uri: "../../../../static/data/3dmodel/GroundVehicle/GroundVehicle.glb",
+          uri: "../../../../static/data/3dmodel/CesiumMilkTruck/CesiumMilkTruck.glb",
+          heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,//贴地
+        },
+      });
+      var point = viewer.entities.add({
+        //position:position
+        point: {
+          pixelSize: 10,
+          color: Cesium.Color.YELLOW,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+        label: {
+          show: false,
+          showBackground: true,
+          font: "14px monospace",
+          horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(5, 5),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+      });
+      //更新移动点位置
+      var range = 0.000002;
+      var duration = 8.0;
+      //获取弧度单位位置
+      var catographic = Cesium.Cartographic.fromCartesian(Cesium.Cartesian3.fromDegrees(lng, lat));
+      var longitude = catographic.longitude;
+      var latitude = catographic.latitude;
+      point.position=new Cesium.CallbackProperty(function (time,result){
+        var offset = (time.secondsOfDay % duration) / duration;
+        cartographic.longitude = longitude - range + offset * range * 2.0;
+        cartographic.latitude = latitude;
+        var height;
+        if (scene.sampleHeightSupported) {
+          height = scene.sampleHeight(cartographic, objectsToExclude);
+        }
+        if (Cesium.defined(height)) {
+          cartographic.height = height;
+          point.label.text = "海拔高度："+Math.abs(height).toFixed(2).toString() + " m";
+          point.label.show = true;
+        } else {
+          cartographic.height = 0.0;
+          point.label.show = false;
+        }
+        return Cesium.Cartographic.toCartesian(
+          cartographic,
+          Cesium.Ellipsoid.WGS84,
+          result
+        );
+      }, false);
+
+      var objectsToExclude = [point];
+      var cartographic = new Cesium.Cartographic();
+      //mapVue.$refs.map.viewer.flyTo(entity);
+      var obj = {lng: lng, lat: lat,eyeHeight:30,pitch:-50};
+      viewerFlyToLonLat(obj);
+    }
+
+    var flyToEntity = null;
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(mapVue.$refs.map.viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          var flyToHeight=updatedPositions[0].height;
+          if(typeof(flyToHeight)=="undefined"){
+            updatedPositions.obj.height = 0;
+          }else{
+            updatedPositions.obj.height = flyToHeight;
+          }
+          console.log("地形高度：", updatedPositions.obj.height);
+          if (flyToEntity) {
+            viewer.entities.remove(flyToEntity);
+          }
+          flyToEntity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 0,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0.9),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+              outlineWidth: 0
+            }
+          });
+          viewer.entities.add(flyToEntity);
+          var flyPromise = viewer.flyTo(flyToEntity, {
+            duration: 5,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(0.0),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+        });
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='start();' style='z-index:1000;position:absolute;top:50px;left:60px'>开始运动
+  </el-button>
+
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

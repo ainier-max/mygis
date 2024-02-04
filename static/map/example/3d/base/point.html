@@ -1,0 +1,74 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+      var viewer=null;
+      var entity=null;
+      function loadEnd(){
+        console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.viewer);
+        viewer=mapVue.$refs.map.viewer;
+      }
+      function addPoint(){
+        entity=new Cesium.Entity({
+          id: 'pointid',
+          position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023),
+          point: {
+            show: true,
+            color: Cesium.Color.SKYBLUE,
+            pixelSize: 10,
+            outlineColor: Cesium.Color.YELLOW,
+            outlineWidth: 3,
+            heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,//贴地
+            scaleByDistance: new Cesium.NearFarScalar(1500, 2.0, 150000, 0.5),//随视角高度的，改变其图标大小
+          },
+        });
+        viewer.entities.add(entity);
+        //获取点的坐标（笛卡尔）
+        var dke = entity.position.getValue(Cesium.JulianDate.now());
+        console.log("获取点的坐标(笛卡尔)：", dke);
+      }
+      function deletePoint(){
+        viewer.entities.remove(entity);
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addPoint();' style='z-index:1000;position:absolute;top:50px;left:60px'>添加Point
+  </el-button>
+
+  <el-button type="primary" onclick='deletePoint();' style='z-index:1000;position:absolute;top:110px;left:50px'>
+    删除Point
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"  style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig,
+            //地图加载完成回调方法
+            loadEndFun:"loadEnd"
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+        },
+        mounted(){
+
+        }
+    });
+</script>
+</body>
+</html>

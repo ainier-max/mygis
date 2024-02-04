@@ -1,0 +1,328 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+
+    var pincerArrowEntity = null;//直线箭头对象
+    var gatherPosition = [];//直线箭头关键点信息
+    var modifyHandler = null;//修改事件
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function addPincerArrow() {
+      //箭头关键点
+      var lnglats=[
+        [118.06818577166231, 24.462040075485383],
+        [118.06941865428037, 24.443448069096643],
+        [118.09030886160893, 24.441778871663633],
+        [118.09201493145962, 24.46636005139074],
+        [118.07439853586105, 24.453345357775827]
+      ];
+      var attackObj=xp.algorithm.doubleArrow(lnglats);
+      console.log("attackObj",attackObj);
+      var arrow=attackObj.polygonalPoint;
+      console.log("根据箭头关键点获取箭头数据：", arrow);
+      var pHierarchy = new Cesium.PolygonHierarchy(arrow);
+      //添加箭头面对象
+      var material = Cesium.Color.fromCssColorString('#ff0').withAlpha(0.5);
+      var outlineMaterial = new Cesium.PolylineDashMaterialProperty({
+        dashLength: 16,
+        color: Cesium.Color.fromCssColorString('#f00').withAlpha(0.7)
+      });
+
+      //闭合虚线
+      var firstPoint = arrow[0];
+      arrow.push(firstPoint);
+      var bData = {
+        polygon: new Cesium.PolygonGraphics({
+          hierarchy: pHierarchy,
+          material: material,
+          show: true
+        }),
+        polyline: {
+          positions: arrow,
+          clampToGround: true,
+          width: 2,
+          material: outlineMaterial,
+          show: true
+        }
+      };
+      pincerArrowEntity = viewer.entities.add(bData);
+      var keyPointArr=[];
+      for(var i=0;i<attackObj.controlPoint.length;i++){
+        var obj=Cesium.Cartesian3.fromDegrees(attackObj.controlPoint[i][0], attackObj.controlPoint[i][1]);
+        keyPointArr.push(obj);
+      }
+      pincerArrowEntity.keyPoints=keyPointArr;
+      //console.log("面对象：", straightArrowEntity);
+    }
+    //直线箭头进入编辑状态
+    function startEditPincerArrow() {
+      gatherPosition = pincerArrowEntity.keyPoints;
+      console.log("所有采集点：",gatherPosition);
+      for (var i = 0; i < gatherPosition.length; i++) {
+        createPoint(gatherPosition[i], i);
+      }
+      //添加点击与移动事件
+      startModify();
+      //重新绘制
+      redraw();
+    }
+
+    function redraw() {
+      //实时根据采集关键点进行重新绘制
+      //箭头面重绘
+      pincerArrowEntity.polygon.hierarchy = new Cesium.CallbackProperty(function () {
+        if (gatherPosition.length > 2) {
+          try {
+            var lonLats = getLonLatArr(gatherPosition);
+            //去重
+            removeDuplicate(lonLats);
+            var doubleArrow = xp.algorithm.doubleArrow(lonLats);
+            var positions = doubleArrow.polygonalPoint;
+            if (!Cesium.defined(positions)) {
+              return null;
+            }
+            if (positions == null || positions.length < 3) {
+              return null;
+            }
+            var pHierarchy = new Cesium.PolygonHierarchy(positions);
+            pHierarchy.keyPoints=lonLats;
+            return pHierarchy;
+          } catch (err) {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      }, false);
+      //箭头虚线重绘
+      pincerArrowEntity.polyline.positions = new Cesium.CallbackProperty(function () {
+        if (gatherPosition.length < 3) {
+          return null;
+        }
+        try {
+          var lonLats = getLonLatArr(gatherPosition);
+          //去重
+          removeDuplicate(lonLats);
+          var doubleArrow = xp.algorithm.doubleArrow(lonLats);
+          var positions = doubleArrow.polygonalPoint;
+          if (positions == null || positions.length < 2) {
+            return null;
+          }
+          var firstPoint = positions[0];
+          positions.push(firstPoint);
+          return positions;
+        } catch (err) {
+          return null;
+        }
+      }, false);
+    }
+    //坐标去重
+    function removeDuplicate(lonLats) {
+      if (!lonLats || lonLats.length < 2) {
+        return;
+      }
+      for (var i = 1; i < lonLats.length; i++) {
+        var p1 = lonLats[i - 1];
+        var p2 = lonLats[i];
+        if (p2[0] == p1[0] && p2[1] == p1[1]) {
+          lonLats.splice(i, 1);
+          i--;
+        }
+      }
+    }
+    //世界坐标转经纬度
+    function getLonLatArr(positions) {
+      var arr = [];
+      for (var i = 0; i < positions.length; i++) {
+        var p = getLonLat(positions[i]);
+        if (p != null) {
+          arr.push([p.lon, p.lat]);
+        }
+      }
+      return arr;
+    }
+    //创建关键点
+    function createPoint(cartesian, oid) {
+      var point = viewer.entities.add({
+        position: cartesian,
+        billboard: {
+          image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAY1BMVEX///+4t624t63BRkbbj4//9/fbjIz/6+v/5+f/5ub/3d3/1dX/0ND/z8/bgYH/xsb/vb3/urr/tLT/qqr/qKj/kpL/cHD/XFz/WFjbaWn/dnb/YGD/WVn/ior/bm7bb2////8vWcu1AAAAA3RSTlMAAIAXzkf+AAAAAWJLR0QAiAUdSAAAAAd0SU1FB9sFEhYZAAV2IPIAAACASURBVBjTjc7JEoMgEEVR0895wmiYRf//L4WiSVV2uRuKs+lXVX/0iiGWXgagbpo6UQa0XT8MfdeiwDjNyzJPIwNWsb1jm1iRQezHJ3bsgkEqbWJaSQbr/GnM6Z3NQAiX19pfAcRX7uCUcuEuZwmwUlqAylKiNJ3oOz1R+jL89gAYeAaPM7P+sgAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxOC0wNi0yOFQyMjozNDowMyswODowMByu+LsAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTEtMDUtMThUMjI6MjU6MDArMDg6MDAs8HGJAAAAQ3RFWHRzb2Z0d2FyZQAvdXNyL2xvY2FsL2ltYWdlbWFnaWNrL3NoYXJlL2RvYy9JbWFnZU1hZ2ljay03Ly9pbmRleC5odG1svbV5CgAAABh0RVh0VGh1bWI6OkRvY3VtZW50OjpQYWdlcwAxp/+7LwAAABd0RVh0VGh1bWI6OkltYWdlOjpIZWlnaHQAMTYdr15vAAAAFnRFWHRUaHVtYjo6SW1hZ2U6OldpZHRoADE25QCe4gAAABl0RVh0VGh1bWI6Ok1pbWV0eXBlAGltYWdlL3BuZz+yVk4AAAAXdEVYdFRodW1iOjpNVGltZQAxMzA1NzI4NzAwvZ5IOQAAABB0RVh0VGh1bWI6OlNpemUANDM2QnL66p4AAABedEVYdFRodW1iOjpVUkkAZmlsZTovLy9ob21lL3d3d3Jvb3QvbmV3c2l0ZS93d3cuZWFzeWljb24ubmV0L2Nkbi1pbWcuZWFzeWljb24uY24vc3JjLzM0Ny8zNDc1MS5wbmfjEwQRAAAAAElFTkSuQmCC",
+          eyeOffset: new Cesium.ConstantProperty(new Cesium.Cartesian3(0, 0, -500)),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+      });
+      point.oid = oid;
+      point.flag = "anchor";
+      return point;
+    };
+
+    //监听两个点的点击与移动事件
+    function startModify() {
+      var isMoving = false;
+      var pickedAnchor = null;
+      modifyHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+      modifyHandler.setInputAction(function (event) {
+        var position = event.position;
+        if (!Cesium.defined(position)) {
+          return;
+        }
+        var ray = viewer.camera.getPickRay(position);
+        if (!Cesium.defined(ray)) {
+          return;
+        }
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        if (isMoving) {
+          isMoving = false;
+          pickedAnchor.position.setValue(cartesian);
+          var oid = pickedAnchor.oid;
+          gatherPosition[oid] = cartesian;
+        } else {
+          var pickedObject = viewer.scene.pick(position);
+          if (!Cesium.defined(pickedObject)) {
+            return;
+          }
+          if (!Cesium.defined(pickedObject.id)) {
+            return;
+          }
+          var entity = pickedObject.id;
+          //console.log("entity",entity);
+          //如果点击的不是点；则返回
+          if (entity.flag != "anchor") {
+            return;
+          }
+          pickedAnchor = entity;
+          isMoving = true;
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      modifyHandler.setInputAction(function (event) {
+        if (!isMoving) {
+          return;
+        }
+        var position = event.endPosition;
+        if (!Cesium.defined(position)) {
+          return;
+        }
+
+        var ray = viewer.scene.camera.getPickRay(position);
+        if (!Cesium.defined(ray)) {
+          return;
+        }
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        //console.log("pickedAnchor",pickedAnchor);
+        //console.log("pickedAnchor.position",pickedAnchor.position);
+        pickedAnchor.position.setValue(cartesian);
+        var oid = pickedAnchor.oid;
+        gatherPosition[oid] = cartesian;
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    }
+
+    //判断两点是否再同一位置
+    function isSimpleXYZ(p1, p2) {
+      if (p1.x == p2.x && p1.y == p2.y && p1.z == p2.z) {
+        return true;
+      }
+      return false;
+    }
+
+    //笛卡尔转经纬度
+    function getLonLat(cartesian) {
+      var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+      //cartographic.height = viewer.scene.globe.getHeight(cartographic);
+      var pos = {
+        lon: cartographic.longitude,
+        lat: cartographic.latitude,
+        alt: 0
+      };
+      pos.lon = Cesium.Math.toDegrees(pos.lon);
+      pos.lat = Cesium.Math.toDegrees(pos.lat);
+      return pos;
+    }
+
+    //获取修改后的直线箭头数据
+    function getAttackPincerValue() {
+      var entityList = viewer.entities.values;
+      //去掉关键点
+      for (var i = 0; i < entityList.length; i++) {
+        var entity = entityList[i];
+        if (entity.flag == "anchor") {
+          viewer.entities.remove(entity);
+          i--;
+        }
+      }
+      var dke = pincerArrowEntity.polygon.hierarchy.getValue().positions;
+      //console.log("采集的直线箭头(笛卡尔)：", dke);
+      var objArr = [];
+      for (var i = 0; i < dke.length; i++) {
+        var ellipsoid = viewer.scene.globe.ellipsoid;
+        var cartesian3 = new Cesium.Cartesian3(dke[i].x, dke[i].y, dke[i].z);
+        var cartographic = ellipsoid.cartesianToCartographic(cartesian3);
+        //console.log("cartographic",cartographic);
+        var obj = {};
+        obj.lat = Cesium.Math.toDegrees(cartographic.latitude);
+        obj.lng = Cesium.Math.toDegrees(cartographic.longitude);
+        //obj.alt=0;
+        objArr.push(obj);
+      }
+      console.log("修改后的钳击箭头(经纬度)", objArr);
+      console.log("修改后的钳击箭头关键点",pincerArrowEntity.polygon.hierarchy.getValue().keyPoints);
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addPincerArrow();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    添加钳击箭头
+  </el-button>
+  <el-button type="primary" onclick='startEditPincerArrow();'
+             style='z-index:1000;position:absolute;top:100px;left:50px'>钳击箭头进入编辑
+  </el-button>
+  <el-button type="primary" onclick='getAttackPincerValue();'
+             style='z-index:1000;position:absolute;top:150px;left:50px'>结束编辑，获取采集数据
+  </el-button>
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+      function drawPolylineTest() {
+          mapVue.$refs.map.drawPolyline(polylineReceiver);
+      }
+
+      function polylineReceiver(polylineObj) {
+          console.log("上图的对象", polylineObj);
+          console.log("获取的坐标：", polylineObj.zbc);
+          var xyStr="";
+          for(var i=0;i<polylineObj.zbc.length;i++){
+              xyStr=xyStr+"["+polylineObj.zbc[i].lat+","+polylineObj.zbc[i].lng+"]"+",";
+          }
+          xyStr=xyStr.substr(0,xyStr.length-1);
+          console.log("获取的坐标数据：");
+          console.log(xyStr);
+      }
+
+      function drawDeleteLastVertexTest() {
+          mapVue.$refs.map.drawDeleteLastVertex();
+      }
+
+      function cancelDrawTest() {
+          mapVue.$refs.map.clearHooks();
+      }
+
+
+  </script>
+</head>
+<body>
+<!--JS版地图接入步骤3：搭建VUE组件元素-->
+<div id="my-app">
+  <!--
+ type：类型[js,vue]
+ config：地图配置信息
+ -->
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='drawPolylineTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    线采集
+  </el-button>
+  <el-button type="primary" onclick='drawDeleteLastVertexTest();'
+             style='z-index:1000;position:absolute;top:100px;left:50px'>删除上一个点
+  </el-button>
+  <el-button type="primary" onclick='cancelDrawTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    取消采集
+  </el-button>
+
+</div>
+<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

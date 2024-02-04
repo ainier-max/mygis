@@ -1,0 +1,146 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script src="../../../map/vue-lib/mapjs/cesium/initMap.js"></script>
+
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      //初始化地图
+      initMap();
+      //定位
+      var obj = {lng:118.0850887298584, lat: 24.439001083374023,eyeHeight:5000,pitch:-65,heading:0.0,time:1};
+      viewerFlyToLonLat(obj);
+    }
+
+    //可编辑点
+    var gatherPoint = null;
+
+    function addPoint() {
+      gatherPoint = viewer.entities.add({
+        name: 'point',
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023),
+        point: {
+          color: Cesium.Color.CHARTREUSE.withAlpha(1),
+          pixelSize: 10,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 1
+        }
+      });
+    }
+
+    //当前移动点
+    var currentPoint = null;
+    //事件监听
+    var handler = null;
+    //是否编辑状态
+    var isEditting = false;
+
+    function editPoint() {
+      document.getElementById("map").style.cursor = "pointer";
+      //去掉双击事件
+      viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+      //限制地图操作
+      viewer.scene.screenSpaceCameraController.enableRotate = false;
+      viewer.scene.screenSpaceCameraController.enableZoom = false;
+      handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      //鼠标点击事件
+      handler.setInputAction((event) => {
+        let windowPosition = event.position;
+        let pickedObject = viewer.scene.pick(windowPosition);
+        if (Cesium.defined(pickedObject)) {
+          let entity = pickedObject.id;
+          if (entity.name == "point" && !isEditting) {
+            currentPoint = entity;
+            currentPoint.point.color=Cesium.Color.RED;
+            isEditting=true;
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+      // 对鼠标移动事件的监听
+      handler.setInputAction((event) => {
+        if (isEditting && currentPoint && currentPoint.name == "point") {
+          //获取加载地形后对应的经纬度和高程：地标坐标
+          var ray = viewer.camera.getPickRay(event.endPosition);
+          var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+          if (!cartesian) {
+            return;
+          }
+          currentPoint.position = cartesian;
+          gatherPoint.positions = new Cesium.CallbackProperty(function (time, result) {
+            return currentPoint.position;
+          }, false);
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+      // 对鼠标抬起事件的监听(结束点采集)
+      handler.setInputAction((event) => {
+        isEditting = false;
+        currentPoint = undefined;
+      }, Cesium.ScreenSpaceEventType.LEFT_UP);
+    }
+
+    function endEditPoint(){
+      gatherPoint.point.color=Cesium.Color.CHARTREUSE.withAlpha(1);
+      viewer.scene.screenSpaceCameraController.enableRotate = true;
+      viewer.scene.screenSpaceCameraController.enableZoom = true;
+      //移除地图点击事件
+      handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOWN)//移除事件
+      //移除地图移动事件
+      handler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE)//移除事件
+      var dke=gatherPoint.position.getValue(Cesium.JulianDate.now());
+      console.log("修改后的点坐标(笛卡尔)：",dke);
+      var ellipsoid=viewer.scene.globe.ellipsoid;
+      var cartesian3=new Cesium.Cartesian3(dke.x,dke.y,dke.z);
+      var cartographic=ellipsoid.cartesianToCartographic(cartesian3);
+      var obj={};
+      obj.lat=Cesium.Math.toDegrees(cartographic.latitude);
+      obj.lng=Cesium.Math.toDegrees(cartographic.longitude);
+      obj.alt=cartographic.height;
+      console.log("修改后的点坐标(经纬度)", obj);
+      //鼠标变成默认
+      document.getElementById("map").style.cursor = "default";
+    }
+  </script>
+</head>
+
+<body onload="loadEnd()">
+<div id="my-app">
+  <el-button type="primary" onclick='addPoint();' style='z-index:1000;position:absolute;top:50px;left:60px'>添加可编辑点
+  </el-button>
+
+
+  <el-button type="primary" onclick='editPoint();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    鼠标选中可编辑点进入编辑
+  </el-button>
+
+  <el-button type="primary" onclick='endEditPoint();' style='z-index:1000;position:absolute;top:150px;left:50px'>可编辑点结束编辑
+  </el-button>
+
+
+  <div id="map" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></div>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+
+    },
+    components: {
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

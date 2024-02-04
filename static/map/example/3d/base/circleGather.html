@@ -1,0 +1,165 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    //事件
+    var handler=null;
+    //中心点
+    var centerPoint=null;
+    //采集的圆对象
+    var ellipseGather=null;
+    function ellipseGatherFun() {
+      circleGather=null;
+      //鼠标变成加号
+      document.getElementById("map").style.cursor = "crosshair";
+      //进制地图移动
+      viewer.scene.screenSpaceCameraController.enableRotate = false;
+      viewer.scene.screenSpaceCameraController.enableZoom = false;
+      handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      //鼠标点击事件
+      handler.setInputAction((event) => {
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray = viewer.camera.getPickRay(event.position);
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        //console.log("cartesian:", cartesian);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        centerPoint = viewer.entities.add({
+          name: 'centerPoint',
+          position: cartesian,
+          point: {
+            color: Cesium.Color.CHARTREUSE.withAlpha(1),
+            pixelSize: 10,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 1
+          }
+        });
+        //默认生成半径为0.1米的圆。
+        circleGather=viewer.entities.add({
+          position: cartesian,
+          ellipse: {
+            semiMinorAxis: 0.1,//椭圆短轴（单位米）
+            semiMajorAxis: 0.1,//椭圆长轴（单位米）
+            material: Cesium.Color.GREENYELLOW.withAlpha(0.5),
+            outline:true,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 3
+          },
+        });
+      }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+      // 对鼠标移动事件的监听
+      handler.setInputAction((event) => {
+        if(centerPoint==null || circleGather==null){
+          return;
+        }
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray = viewer.camera.getPickRay(event.endPosition);
+        var radiusCartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!radiusCartesian) {
+          return;
+        }
+        var centerCartesian=centerPoint.position.getValue(Cesium.JulianDate.now());
+        //计算移动点与中心点的距离（单位米）
+        var centerTemp = viewer.scene.globe.ellipsoid.cartesianToCartographic(centerCartesian);
+        var radiusTemp = viewer.scene.globe.ellipsoid.cartesianToCartographic(radiusCartesian);
+        var geodesic = new Cesium.EllipsoidGeodesic();
+        geodesic.setEndPoints(centerTemp, radiusTemp);
+        var radius = geodesic.surfaceDistance;
+        //console.log("radius",radius);
+        //如果半径小于0,则不更新圆信息
+        if(radius<=0){
+          return;
+        }
+        circleGather.ellipse.semiMinorAxis=new Cesium.CallbackProperty(function (time, result){
+          return radius;
+        },false);
+        circleGather.ellipse.semiMajorAxis=new Cesium.CallbackProperty(function (time, result){
+          return radius;
+        },false);
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+      // 对鼠标抬起事件的监听(结束点采集)
+      handler.setInputAction((event) => {
+        //鼠标变成默认
+        document.getElementById("map").style.cursor = "default";
+        //开始鼠标操作地图
+        viewer.scene.screenSpaceCameraController.enableRotate = true;
+        viewer.scene.screenSpaceCameraController.enableZoom = true;
+        //移除地图鼠标点击事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOWN)
+        //移除地图鼠标移动事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE)
+        //移除地图鼠标抬起事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_UP)
+        var ellipsoid = viewer.scene.globe.ellipsoid;
+        var cartographic = ellipsoid.cartesianToCartographic(centerPoint.position.getValue(Cesium.JulianDate.now()));
+        var lat = Cesium.Math.toDegrees(cartographic.latitude);
+        var lng = Cesium.Math.toDegrees(cartographic.longitude);
+        var height = cartographic.height;
+        console.log("圆中心点：经度",lng + ",纬度：" + lat + ",高度：" + height);
+        console.log("圆半径：",circleGather.ellipse.semiMinorAxis.getValue()+"米");
+        //如果圆半径小于0.5米则删除，防止出现默认为0.1米的被采集。该种情况则是用户取消圆采集
+        if(circleGather.ellipse.semiMinorAxis.getValue()<0.5){
+          viewer.entities.remove(circleGather);
+          circleGather=null;
+        }
+        //清除圆中心点和半径点
+        viewer.entities.remove(centerPoint);
+        centerPoint=null;
+      }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+
+
+
+    }
+
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='ellipseGatherFun();' style='z-index:1000;position:absolute;top:50px;left:60px'>圆采集(鼠标点击后压住拖动)
+  </el-button>
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

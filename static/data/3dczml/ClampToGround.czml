@@ -1,0 +1,53 @@
+[
+  {
+    "id": "document",
+    "version": "1.0",
+    "clock": {
+      "interval": "2018-07-19T15:18:00Z/2018-07-19T15:19:30Z",
+      "currentTime": "2018-07-19T15:18:00Z",
+      "multiplier": 3,
+      "range": "LOOP_STOP",
+      "step": "SYSTEM_CLOCK_MULTIPLIER"
+    }
+  },
+  {
+    "id": "CesiumMilkTruck",
+    "model": {
+      "gltf": "../3dmodel/CesiumMilkTruck/CesiumMilkTruck.glb",
+      "scale" : 50.0
+    },
+    "position": {
+      "interpolationAlgorithm": "LINEAR",
+      "forwardExtrapolationType": "HOLD",
+      "cartographicDegrees": [
+              "2018-07-19T15:18:00Z",
+              118.0850887298584, 24.439001083374023,10,
+              "2018-07-19T15:19:30Z",
+              118.1044813816513,24.451483144361173,10
+      ]
+    }
+  },
+  {
+    "id": "Polyline",
+    "polyline": {
+      "positions": {
+        "cartographicDegrees": [
+          118.1044813816513,24.451483144361173,0, 118.0850887298584, 24.439001083374023,0
+        ]
+      },
+      "material": {
+        "polylineOutline": {
+          "color": {
+              "rgba": [255, 255, 0, 255]
+          },
+          "outlineColor": {
+              "rgba": [0, 0, 0, 255]
+          },
+          "outlineWidth": 2
+        }
+      },
+      "width": 10,
+      "clampToGround": true
+    }
+  }
+]

@@ -1,0 +1,83 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      dynamicColor();
+    }
+    //动态纹理-颜色
+    function dynamicColor() {
+      var redTube = viewer.entities.add({
+        name : 'Red tube with rounded corners',
+        polylineVolume : {
+          positions : Cesium.Cartesian3.fromDegreesArrayHeights([118.1044813816513, 24.451483144361173,183.8,118.0850887298584, 24.439001083374023,10.6,118.0850887298584, 24.449001083374023,67.4]),
+          shape : computeCircle(30.0),
+          //颜色回调
+          material : new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(function() {
+            return Cesium.Color.fromRandom({
+              minimumRed : 0.75,
+              minimumGreen : 0.75,
+              minimumBlue : 0.75,
+              alpha : 1.0
+            });
+
+          }, false))
+        }
+      });
+    }
+
+    function computeCircle(radius) {
+      var positions = [];
+      for (var i = 0; i < 360; i++) {
+        var radians = Cesium.Math.toRadians(i);
+        positions.push(
+          new Cesium.Cartesian2(
+            radius * Math.cos(radians),
+            radius * Math.sin(radians)
+          )
+        );
+      }
+      return positions;
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

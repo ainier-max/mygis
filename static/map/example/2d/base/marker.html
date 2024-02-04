@@ -1,0 +1,109 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      function addMarkerTest() {
+          var markerJSON = {};
+          //xy坐标
+          markerJSON.xy = [24.502422570142833, 118.15471659369913];
+          //图片位置
+          markerJSON.iconUrl = "../images/poi.png";
+          //图片偏移（坐标固定在图标的哪个点，[0,0]表示图标的左上角）
+          markerJSON.iconAnchor = [21, 17];
+          //图片大小
+          markerJSON.width = 42;
+          markerJSON.height = 34;
+          //是否开启可拖动设置(有需要开启拖动,在使用该参数)
+          markerJSON.option={};
+          window.marker1 = mapVue.$refs.map.addMarker(markerJSON);
+          console.log("图标对象", window.marker1);
+      }
+      function addMarker2Test(){
+          var markerJSON = {};
+          //xy坐标
+          markerJSON.xy = [24.502422570142833, 118.15471659369913];
+          //图片位置
+          markerJSON.iconUrl = "../images/plane.png";
+          //图片偏移（坐标固定在图标的哪个点，[0,0]表示图标的左上角）
+          markerJSON.iconAnchor = [21, 17];
+          //图片大小
+          markerJSON.width = 42;
+          markerJSON.height = 34;
+          //可拖动设置(有需要开启拖动,在使用该参数)
+          markerJSON.option={};
+          window.marker2 = mapVue.$refs.map.addMarker(markerJSON);
+          console.log("图标对象", window.marker2);
+      }
+
+      function showMarker1Test(){
+          mapVue.$refs.map.setZIndexOffset(window.marker2,500);
+          mapVue.$refs.map.setZIndexOffset(window.marker1,1000);
+      }
+      function showMarker2Test(){
+          mapVue.$refs.map.setZIndexOffset(window.marker2,1000);
+          mapVue.$refs.map.setZIndexOffset(window.marker1,500);
+      }
+      function sendCenter(){
+          var bounds=mapVue.$refs.map.map.getBounds();
+          var south=bounds.getSouth();
+          var north=bounds.getNorth();
+          console.log(south,north);
+          //屏幕高度分割三段
+          var tt=(north-south)/3;
+          var newCenter=[window.marker1.getLatLng().lat-tt,window.marker1.getLatLng().lng];
+          console.log("newCenter:",newCenter);
+          mapVue.$refs.map.panTo(newCenter,{duration:1});
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addMarkerTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    添加marker1
+  </el-button>
+
+  <el-button type="primary" onclick='addMarker2Test();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    添加marker2
+  </el-button>
+  <el-button type="primary" onclick='showMarker1Test();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    marker1提前
+  </el-button>
+  <el-button type="primary" onclick='showMarker2Test();' style='z-index:1000;position:absolute;top:200px;left:50px'>
+    marker2提前
+  </el-button>
+
+  <el-button type="primary" onclick='sendCenter();' style='z-index:1000;position:absolute;top:250px;left:50px'>
+    添加marker1定位到1/3高度的中间
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+            //config: window.minemapConfig
+        },
+        components: {
+            //'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

@@ -1,0 +1,56 @@
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <!--vue依赖-->
+  <script src="../../../vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../vue-lib/elementjs/index.css">
+</head>
+
+<body style="background-color: rgb(249 249 249);" >
+
+<div id="guide-app">
+  <div class="block">
+    <el-timeline>
+      <el-timeline-item timestamp="2022/06/13" placement="top">
+        <el-card>
+          <h4><el-button type="primary" @click="downUpdatZip('20220613')">组件包下载</el-button></h4>
+          <p>（1）军事标绘示例提供</p>
+          <p>（2）GIS剑谱系列组件开源</p>
+        </el-card>
+      </el-timeline-item>
+
+    </el-timeline>
+  </div>
+</div>
+<script>
+  var guideVue = new Vue({
+    el: '#guide-app',
+    data() {
+      return {
+
+      };
+    },
+    methods: {
+        downUpdatZip(version){
+            var cbc_scripts = document.getElementsByTagName('script')//获所有script标签
+            var cbc_pre="";
+            //获取/vue-lib/jslib.js的前缀
+            for(var i=0;i<cbc_scripts.length;i++){
+                if(cbc_scripts[i].src.indexOf("/vue-lib/elementjs/index.js")>0){
+                    var jslibsrc=cbc_scripts[i].src;
+                    var subsrc=jslibsrc.substring(0,jslibsrc.indexOf("/vue-lib/elementjs/index.js"));
+                    cbc_pre=subsrc;
+                }
+            }
+            console.log("cbc_pre",cbc_pre);
+            console.log("version",version);
+            window.open(cbc_pre+"/updateZip/2d/"+version+".zip");
+        }
+    }
+  });
+</script>
+</body>
+</html>
+

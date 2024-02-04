@@ -1,0 +1,119 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      /**
+       * 移动图标,注意：图标只支持一个移动图标的一条轨迹
+       */
+      function addMovingMarkerTest() {
+          //如果是移动到最后一个点自动删除，则无需以下代码。该代码是用来手动删除移动点
+          // if (window.movingMarkerLayer != null) {
+          //     mapVue.$refs.map.removeLayer(window.movingMarkerLayer);
+          // }
+          var movingMarkerJson = {};
+          //图标移动路线点
+          movingMarkerJson.xys = [
+              [24.445696, 118.081398], [24.449644, 118.08629],
+              [24.453678, 118.100882], [24.45857, 118.105087],
+              [24.462605, 118.106546], [24.464321, 118.111181],
+              [24.466381, 118.119764], [24.471016, 118.124657],
+              [24.478054, 118.125], [24.483891, 118.125515],
+              [24.490242, 118.13015], [24.502258, 118.133583],
+              [24.510326, 118.132381], [24.519939, 118.132725],
+              [24.528694, 118.12191]
+          ];
+          //为每个点创建气泡框
+          for (var i = 0; i < movingMarkerJson.xys.length; i++) {
+              var popupJson = {};
+              //气泡框的位置
+              popupJson.xy = movingMarkerJson.xys[i];
+              //气泡框内容
+              popupJson.content = "气泡框" + i;
+              popupJson.option = {offset: [0, 0]};
+              movingMarkerJson.xys[i].popup = mapVue.$refs.map.createPopup(popupJson);
+          }
+          //创建移动图标
+          var iconJson = {};
+          iconJson.option = {};
+          iconJson.option.iconUrl = "../images/bike.png";
+          iconJson.option.iconAnchor = [11, 39];//坐标固定在图标的哪个点，[0,0]表示图标的左上角
+          var markerIcon = mapVue.$refs.map.createIcon(iconJson);
+          movingMarkerJson.icon = markerIcon;
+          //移动速度
+          movingMarkerJson.speed = 1000;//单位：米/秒
+          //移动图标移动到点的时候是否弹出气泡框
+          movingMarkerJson.movingMarkerShowPopup = false;
+          //移动是否居中
+          movingMarkerJson.movingMarker = false;
+
+          //注意：所有点尾巴，固定长度，固定点数只能有一个为true
+          //(1)展示所有点尾巴
+          movingMarkerJson.showPolyline_flag = false;
+          //是否展示尾巴(固定长度)
+          movingMarkerJson.showTail_flag = true;
+          //是否展示尾巴(固定点数)
+          movingMarkerJson.showTailByPoint_flag = false;
+          //是否展示尾巴(固定点数值，当showTailByPoint_flag时必须设置该值)
+          movingMarkerJson.tailPoint = 5;
+          //移动到最后面是否删除
+          movingMarkerJson.movingMarkerEndRemoveFlag = true;
+          window.movingMarkerLayer = mapVue.$refs.map.addMovingMarker(movingMarkerJson);
+          console.log("movingMarkerLayer:", window.movingMarkerLayer);
+
+          //setTimeout(addMovingMarkerTest,3000);
+      }
+
+      function removeTest() {
+          mapVue.$refs.map.removeLayer(window.movingMarkerLayer);
+      }
+
+      function startTest() {
+          window.movingMarkerLayer.pause();
+      }
+
+      function endTest() {
+          window.movingMarkerLayer.start();
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addMovingMarkerTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    移动图标
+  </el-button>
+  <el-button type="primary" onclick='startTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>暂停
+  </el-button>
+  <el-button type="primary" onclick='endTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>开始
+  </el-button>
+  <el-button type="primary" onclick='removeTest();' style='z-index:1000;position:absolute;top:200px;left:50px'>删除
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            //'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //mapVue.$refs.map.viewer.scene.terrainProvider = new Cesium.EllipsoidTerrainProvider({});
+      //关闭地形检测（必须得设置该属性），否则扩散圈会移动
+      viewer.scene.globe.depthTestAgainstTerrain = true;
+    }
+
+    var option ={
+      minR:10,
+      maxR:1000,
+      deviationR:10,
+    };
+    function showCircleScan() {
+      dynamicRange();
+    }
+
+    //半径变化
+    var radiusTemp = option.minR;
+    function changeRadius() {
+      radiusTemp=radiusTemp+option.deviationR;//deviationR为每次圆增加的大小
+      if(radiusTemp>=option.maxR){
+        radiusTemp=option.minR;
+      }
+      return radiusTemp;
+    }
+    //半径
+    function getRadius() {
+      return radiusTemp;
+    }
+
+    //颜色变化
+    function color() {
+      let x=1-radiusTemp/option.maxR+0.5;
+      return Cesium.Color.RED.withAlpha(x);
+    }
+
+    function dynamicRange(){
+
+      let entitys = this.viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023),
+        name: 'ellipse on surface with outline',
+        ellipse: {
+          semiMajorAxis: new Cesium.CallbackProperty(changeRadius,false),
+          semiMinorAxis: new Cesium.CallbackProperty(getRadius,false),
+          material: new Cesium.ImageMaterialProperty({
+            image:"../../../map/example/images/circleScan.png",
+            repeat:new Cesium.Cartesian2(1.0, 1.0),
+            transparent:true,
+            color:new Cesium.CallbackProperty(color,false)
+          }),
+          outlineColor: Cesium.Color.RED
+        }
+      });
+      return entitys;
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='showCircleScan();' style='z-index:1000;position:absolute;top:50px;left:60px'>动态扩散圈(图片)
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

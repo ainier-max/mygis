@@ -1,0 +1,174 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <!--vue依赖-->
+    <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+    <!--elementui依赖-->
+    <script src="../../../map/vue-lib/elementjs/index.js"></script>
+    <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+    <!--地图依赖js-->
+    <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+    <!--地图配置文件-->
+    <script src="../../../map/vue-lib/mapConfig.js"></script>
+    <script>
+      // 直箭头
+      var gatherPosition=[];//采集的点信息
+      var gatherIcon=L.icon({
+        iconUrl: '../images/gatherPoint.png',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+      var floatingPoint=null;////浮动点
+      var stateLayer=null;//直线箭头标绘
+      var tyl=null;
+      var map=null;
+
+      function loadEnd(){
+        map=this.mapVue.$refs.map.map;
+      }
+      //细箭头标绘
+      function addState(){
+
+        tyl=document.getElementById("tyl").value;
+        gatherPosition=[[24.50120768247909, 118.11504364013673],[24.491522679825767, 118.18096160888673]]
+
+        var longDic=map.distance(gatherPosition[0],gatherPosition[1]);
+        console.log("长轴距离：",longDic);
+
+        var startPoint={};
+        startPoint.latitude=gatherPosition[0][0];
+        startPoint.longitude=gatherPosition[0][1];
+        var endPoint={};
+        endPoint.latitude=gatherPosition[1][0];
+        endPoint.longitude=gatherPosition[1][1];
+        var radians=bearing(startPoint,endPoint);
+        console.log("两点的角度",radians);
+
+        stateLayer = L.ellipse(gatherPosition[0], [longDic, longDic/tyl], radians+90).addTo(map);
+      }
+      //进入编辑状态
+      function editState() {
+        for (var i = 0; i < gatherPosition.length; i++) {
+          var markerTemp=createPoint(gatherPosition[i], i);
+          markerTemp.on('drag', drawCallBack,"plot");
+          markerTemp.dragging.enable();
+        }
+      }
+      //结束采集
+      function endState(){
+        clearKeyPoint();
+        console.log("采集关键点数据：",gatherPosition);
+      }
+      //移动点回调函数
+      function drawCallBack(e){
+        gatherPosition[e.target.oid]=[e.latlng.lat,e.latlng.lng];
+        showRegionToMap();
+      }
+      //画出图形
+      function showRegionToMap(){
+        //console.log("gatherPosition:",gatherPosition);
+        tyl=document.getElementById("tyl").value;
+        var longDic=map.distance(gatherPosition[0],gatherPosition[1]);
+        console.log("长轴距离：",longDic);
+        var startPoint={};
+        startPoint.latitude=gatherPosition[0][0];
+        startPoint.longitude=gatherPosition[0][1];
+        var endPoint={};
+        endPoint.latitude=gatherPosition[1][0];
+        endPoint.longitude=gatherPosition[1][1];
+        var radians=bearing(startPoint,endPoint);
+        console.log("两点的角度",radians);
+        if(stateLayer==null){
+          stateLayer = L.ellipse(gatherPosition[0], [longDic, longDic/tyl], radians+90).addTo(map);
+        }else{
+          map.removeLayer(stateLayer);
+          stateLayer=null;
+          stateLayer = L.ellipse(gatherPosition[0], [longDic, longDic/tyl], radians+90).addTo(map);
+        }
+      }
+      //创建采集点
+      function createPoint(latlng,oid){
+        var markerTemp=L.marker(latlng,{icon: gatherIcon,opacity:0.9}).addTo(map);
+        markerTemp.oid = oid;
+        markerTemp.flag = "keypoint";
+        return markerTemp;
+      }
+      //清空采集点
+      function clearKeyPoint(){
+        map.eachLayer(function(layer){
+          //删除layerType不是map值的图层
+          if(layer.flag=="keypoint"){
+            map.removeLayer(layer);
+          }
+        });
+      }
+
+
+      /*
+       * 计算两点对于正北方向的朝向角度 [0,360]
+       * @param {*} start format:{'latitude': 30, 'longitude': 120 }
+       * @param {*} end
+       */
+      function bearing(start, end) {
+        let rad = Math.PI / 180,
+          lat1 = start.latitude * rad,
+          lat2 = end.latitude * rad,
+          lon1 = start.longitude * rad,
+          lon2 = end.longitude * rad;
+        const a = Math.sin(lon2 - lon1) * Math.cos(lat2);
+        const b = Math.cos(lat1) * Math.sin(lat2) -
+          Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+
+        return radiansToDegrees(Math.atan2(a, b));
+      }
+
+      /*
+       * 弧度转换为角度
+       */
+      function radiansToDegrees(radians) {
+        const degrees = radians % (2 * Math.PI);
+        return degrees * 180 / Math.PI;
+      }
+
+    </script>
+  </head>
+  <body>
+    <!--JS版地图接入步骤3：搭建VUE组件元素-->
+    <div id="my-app">
+	     <!--
+      type：类型[js,vue]
+      config：地图配置信息
+      -->
+       <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+      <input type="button" onclick='addState();' value="椭圆叠加地图"
+             style='position:absolute;left:50px;top:50px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+      <input type="button" onclick='editState();' value="椭圆进入编辑"
+             style='position:absolute;left:50px;top:100px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+      <input type="button" onclick='endState();' value="椭圆结束编辑"
+             style='position:absolute;left:50px;top:150px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+      <div style="position:absolute;left:50px;top:200px;z-index:9999;font-size:22px;color:blue;font-weight:bold">
+        椭圆率（长轴/短轴）:<input type="text" id="tyl" style="width:50px" value="2">
+      </div>
+
+    </div>
+	<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+      el: '#my-app',
+      data: {
+        id:"map",
+        type:"js",
+        config: window.defaultMapConfig,
+        loadEndFun:'loadEnd'
+      },
+      components: {
+          'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+      }
+    });
+	</script>
+  </body>
+</html>
+  <!--编辑代码end-->

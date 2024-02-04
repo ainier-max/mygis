@@ -1,0 +1,78 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+      function loadEnd() {
+          console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      }
+
+      /* 获取camera中心点坐标 */
+      function getCenterPosition() {
+          var viewer=mapVue.$refs.map.viewer;
+          var result = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(viewer.canvas.clientWidth / 2, viewer.canvas
+              .clientHeight / 2));
+          var curPosition = Cesium.Ellipsoid.WGS84.cartesianToCartographic(result);
+          var lng = curPosition.longitude * 180 / Math.PI;
+          var lat = curPosition.latitude * 180 / Math.PI;
+          var scene = viewer.scene;
+          var ellipsoid = scene.globe.ellipsoid;
+          var height = ellipsoid.cartesianToCartographic(viewer.camera.position).height;
+          var centerObj={
+              lng: lng,
+              lat: lat,
+              height: height
+          };
+          console.log("中心点信息",centerObj);
+          var html="";
+          html+="高度："+centerObj.height+"\n";
+          html+="经度："+centerObj.lng+"\n";
+          html+="纬度："+centerObj.lat+"\n";
+          document.getElementById("infoID").innerText=html;
+          return centerObj;
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='getCenterPosition();' style='z-index:1000;position:absolute;top:50px;left:60px'>获取中心点信息
+  </el-button>
+
+  <span id="infoID" style='z-index:1000;position:absolute;top:100px;left:60px;background: white;width: 300px;height: 100px'>
+
+  </span>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+
+
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            //地图配置信息（必须）
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig,
+            //地图加载完成回调方法
+            loadEndFun: "loadEnd"
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+        },
+        mounted() {
+
+        }
+    });
+</script>
+</body>
+</html>

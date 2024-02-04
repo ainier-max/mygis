@@ -1,0 +1,113 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+
+    /**
+     * 图层上图
+     */
+    function addLayerTest(){
+
+
+      //面
+      var polygonJSON={};
+      polygonJSON.xys=[[
+        [24.523887634277347,118.14130783081056],
+        [24.49127197265625,118.14302444458008],
+        [24.494361877441406,118.16774368286133],
+        [24.517192840576172,118.16619873046874],
+        [24.523887634277347,118.14130783081056],
+      ]];
+      polygonJSON.option={};
+      //边界线颜色
+      polygonJSON.option.color="#ff0000";
+      polygonJSON.option.fillColor="#f18";
+      polygonJSON.option.fillOpacity=0.8;
+      window.polygon= mapVue.$refs.map.addPolygon(polygonJSON);
+
+      //圆
+      var circleJson={};
+      //圆心
+      circleJson.xy= [24.522422570142833,118.11471659369913];
+      circleJson.option={};
+      //圆半径
+      circleJson.option.radius=2000;//单位米
+      //边界线颜色
+      circleJson.option.color="#ff0000";
+      //填充颜色
+      circleJson.option.fillColor="#f18";
+      //透明度
+      circleJson.option.fillOpacity=0.5;
+      window.circle=mapVue.$refs.map.addCircle(circleJson);
+
+      //矩形
+      var rectJson={};
+      //每个数组相邻必须有个x或y值相同
+      rectJson.xys=[
+        [24.47939581726156,118.05312782499335],
+        [24.47939581726156,118.13036161335647],
+        [24.516293262396033,118.13036161335647],
+        [24.516293262396033,118.05312782499335]
+      ];
+      rectJson.option={};
+      //边界线大小(四维图形接口宽度不生效)
+      rectJson.option.weight=5;
+      //边界线颜色
+      rectJson.option.color="#ff0000";
+      //填充颜色
+      rectJson.option.fillColor="#f18";
+      //透明度
+      rectJson.option.fillOpacity=0.5;
+      window.rect=mapVue.$refs.map.addRect(rectJson);
+    }
+
+    function getCirclePointTest(){
+      document.getElementById("zbz").value=window.circle.centerPoint.lat+","+window.circle.centerPoint.lng;
+    }
+    function getRectPointTest(){
+      document.getElementById("zbz").value=window.rect.centerPoint.lat+","+window.rect.centerPoint.lng;
+    }
+    function getPolygonPointTest(){
+      document.getElementById("zbz").value=window.polygon.centerPoint.lat+","+window.polygon.centerPoint.lng;
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addLayerTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>先图层上图</el-button>
+  <el-button type="primary" onclick='getCirclePointTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>获取圆中心点</el-button>
+  <el-button type="primary" onclick='getRectPointTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>获取矩形中心点</el-button>
+  <el-button type="primary" onclick='getPolygonPointTest();' style='z-index:1000;position:absolute;top:200px;left:50px'>获取多边形中心点</el-button>
+
+  <el-input  type="textarea" id="zbz" placeholder="提示信息" :rows="5" style='z-index:1000;position:absolute;top:250px;left:60px;width: 350px'></el-input>
+
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      id:"map",
+      type:"js",
+      config: window.defaultMapConfig
+    },
+    components: {
+        'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+    }
+  });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

@@ -1,0 +1,59 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      /**
+       * 波纹点
+       */
+      function addPulsingIconTest() {
+          var pulseJson = {};
+          //xy坐标
+          pulseJson.xy = [24.50637817382813, 118.13152313232423];
+          pulseJson.option = {};
+          //波纹大小
+          pulseJson.option.iconSize = [10, 10];
+          //波纹颜色
+          pulseJson.option.color = 'green';
+          //波纹圆点颜色
+          pulseJson.option.fillColor = 'green';
+          //波纹速度（数值越大，速度越慢）
+          pulseJson.option.heartbeat = 2;
+          //是否显示波纹
+          pulseJson.option.animate = true;
+          var marker = mapVue.$refs.map.addPulsingIcon(pulseJson);
+          console.log("波纹点", marker);
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addPulsingIconTest();' style='z-index:1000;position:absolute;top:50px;left:50px'>
+    波纹点
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

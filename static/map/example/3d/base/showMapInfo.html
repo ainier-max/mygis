@@ -1,0 +1,122 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      getMapInfo();
+    }
+
+    function getMapInfo() {
+      // g跟随鼠标获取经纬度和海拔
+      var longitude_show = document.getElementById('longitude_show');
+      var latitude_show = document.getElementById('latitude_show');
+      var altitude_show = document.getElementById('altitude_show');
+      var elevation_show = document.getElementById('elevation_show');
+      var heading_show = document.getElementById('heading_show');
+      var pitch_show = document.getElementById('pitch_show');
+      var roll_show = document.getElementById('roll_show');
+
+      var canvas = viewer.scene.canvas;
+      //具体事件的实现
+      var ellipsoid = viewer.scene.globe.ellipsoid;
+      var handler = new Cesium.ScreenSpaceEventHandler(canvas);
+      handler.setInputAction(function (movement) {
+        //捕获椭球体，将笛卡尔二维平面坐标转为椭球体的笛卡尔三维坐标，返回球体表面的点
+        var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, ellipsoid);
+        if (cartesian) {
+          //将笛卡尔三维坐标转为地图坐标（弧度）
+          var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+          //console.log("cartographic1",cartographic);
+          //将地图坐标（弧度）转为十进制的度数
+          var latTemp=Cesium.Math.toDegrees(cartographic.latitude);
+          var lngTemp=Cesium.Math.toDegrees(cartographic.longitude);
+          var altiTemp=viewer.camera.positionCartographic.height;
+          var elecTemp=viewer.scene.globe.getHeight(cartographic);
+          if(typeof (latTemp)!="undefined" && typeof (lngTemp)!="undefined" && typeof (altiTemp)!="undefined" && typeof (elecTemp)!="undefined"){
+            longitude_show.innerHTML = lngTemp.toFixed(4);
+            latitude_show.innerHTML = latTemp.toFixed(4);
+            altitude_show.innerHTML = altiTemp.toFixed(2);//视角高度
+            elevation_show.innerHTML = elecTemp.toFixed(4);;//海拔高度
+          }
+
+          heading_show.innerHTML = Cesium.Math.toDegrees(viewer.camera.heading).toFixed(0);
+          pitch_show.innerHTML = Cesium.Math.toDegrees(viewer.camera.pitch).toFixed(0);
+          roll_show.innerHTML = Cesium.Math.toDegrees(viewer.camera.roll).toFixed(0);
+
+
+
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+      //滚轮事件
+      handler.setInputAction(function (wheelment) {
+        var altiTemp=viewer.camera.positionCartographic.height;
+        if(typeof (altiTemp)!="undefined"){
+          altitude_show.innerHTML = altiTemp.toFixed(2);//视角高度
+        }
+      }, Cesium.ScreenSpaceEventType.WHEEL);
+
+      //Cesium.ScreenSpaceEventType.WHEEL:滚轮事件
+
+      //移除事件
+      //handler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+      /**
+       *
+       // 修改默认的鼠标视图控制方式。
+       viewer.scene.screenSpaceCameraController.zoomEventTypes = [Cesium.CameraEventType.WHEEL, Cesium.CameraEventType.PINCH];
+       viewer.scene.screenSpaceCameraController.tiltEventTypes = [Cesium.CameraEventType.PINCH, Cesium.CameraEventType.RIGHT_DRAG];
+       */
+
+    }
+  </script>
+
+</head>
+
+<body>
+<div id="my-app">
+  <div id="latlng_show"
+       style="z-index:9999;background-color:rgba(0, 0, 0, 0.5);bottom:1px;right:1px;height:25px;position:absolute;">
+    <div style="color: white;margin-left: 3px;margin-right: 3px" align="right">
+      经度：<span id="longitude_show">0.00</span>
+      纬度：<span id="latitude_show">0.00</span>
+      视角高：<span id="altitude_show">0.00</span>米
+      海拔高：<span id="elevation_show">0.00</span>米
+      航向角(y)：<span id="heading_show">0.00</span>度
+      俯仰角(x)：<span id="pitch_show">0.00</span>度
+      翻滚角(z)：<span id="roll_show">0.00</span>度
+    </div>
+  </div>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

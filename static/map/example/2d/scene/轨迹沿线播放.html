@@ -1,0 +1,181 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script src="../../../map/vue-lib/data.js"></script>
+  <script type="text/javascript">
+    var latlngs = [
+      [39.898457, 116.391844],
+      [39.898595, 116.377947],
+      [39.898341, 116.368001],
+      [39.898063, 116.357144],
+      [39.899095, 116.351934],
+      [39.905871, 116.350670],
+      [39.922329, 116.349800],
+      [39.931017, 116.349671],
+      [39.939104, 116.349225],
+      [39.942233, 116.349910],
+      [39.947263, 116.366892],
+      [39.947568, 116.387537],
+      [39.947764, 116.401988],
+      [39.947929, 116.410824],
+      [39.947558, 116.426740],
+      [39.939700, 116.427338],
+      [39.932404, 116.427919],
+      [39.923109, 116.428377],
+      [39.907094, 116.429583],
+      [39.906858, 116.414040],
+      [39.906622, 116.405321],
+      [39.906324, 116.394954],
+      [39.906308, 116.391264],
+      [39.916611, 116.390748]
+    ];
+    var speedList = [1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 4, 4, 4, 3, 2, 2, 1, 1, 1];
+    let speetX = 1 // 默认速度倍数
+
+
+    var newLatlngs=null;
+    var realRouteLine=null;//实时轨迹线
+    var routeLine=null;// 轨迹线
+    var animatedMarker=null;//动态marker
+    var map=null;
+
+    function loadEnd(){
+      console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.map);
+      map=mapVue.$refs.map.map;
+      // 轨迹线
+      routeLine = L.polyline(latlngs, {
+        weight: 8
+      }).addTo(map);
+      // 实时轨迹线
+      realRouteLine = L.polyline([], {
+        weight: 8,
+        color: '#FF9900'
+      }).addTo(map);
+      // 轨迹方向箭头
+      var decorator = L.polylineDecorator(routeLine, {
+        patterns: [{
+          repeat: 50,
+          symbol: L.Symbol.arrowHead({
+            pixelSize: 5,
+            headAngle: 75,
+            polygon: false,
+            pathOptions: {
+              stroke: true,
+              weight: 2,
+              color: '#FFFFFF'
+            }
+          })
+        }]
+      }).addTo(map);
+
+      var carIcon = L.icon({
+        iconSize: [37, 26],
+        iconAnchor: [19, 13],
+        iconUrl: '../images/car1.png'
+      })
+      // 动态marker
+      animatedMarker = L.animatedMarker(routeLine.getLatLngs(), {
+        speedList: speedList,
+        interval: 200, // 默认为100mm
+        icon: carIcon,
+        playCall: updateRealLine
+      }).addTo(map)
+      newLatlngs = [routeLine.getLatLngs()[0]]
+    }
+
+
+    // 绘制已行走轨迹线（橙色那条）
+    function updateRealLine(latlng) {
+      newLatlngs.push(latlng)
+      realRouteLine.setLatLngs(newLatlngs);
+    }
+
+
+    // 加速
+    function speetUp() {
+      speetX = speetX * 2
+      animatedMarker.setSpeetX(speetX);
+    }
+
+    // 减速
+    function speetDown() {
+      speetX = speetX / 2
+      animatedMarker.setSpeetX(speetX);
+    }
+
+    // 开始
+    function start() {
+      animatedMarker.start();
+    }
+
+    // 暂停
+    function pause() {
+      animatedMarker.pause();
+    }
+
+    // 停止
+    function stop() {
+      newLatlngs = []
+      animatedMarker.stop();
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" :init-position="initPosition" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='start();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    开始
+  </el-button>
+
+  <el-button type="primary" onclick='pause();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    暂停
+  </el-button>
+
+
+  <el-button type="primary" onclick='speetUp();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    加速
+  </el-button>
+  <el-button type="primary" onclick='speetDown();' style='z-index:1000;position:absolute;top:200px;left:50px'>
+    减速
+  </el-button>
+  <el-button type="primary" onclick='stop();' style='z-index:1000;position:absolute;top:250px;left:50px'>
+    停止
+  </el-button>
+
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图初始定位
+      initPosition:{
+        level:13,//级别
+        centerPoint:[39.916611, 116.390748]//中心点
+      },
+      //地图加载完成回调方法
+      loadEndFun:"loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+    }
+  });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

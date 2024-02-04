@@ -1,0 +1,97 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      viewer = mapVue.$refs.map.viewer;
+      //去掉地形图
+      //mapVue.$refs.map.viewer.scene.terrainProvider = new Cesium.EllipsoidTerrainProvider({});
+    }
+
+    var gatherPoint = null;
+    var handler=null;
+
+    function pointGather() {
+      gatherPoint = null;
+      handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+      //鼠标变成加号
+      document.getElementById("map").style.cursor = "crosshair";
+      // 对鼠标按下事件的监听
+      handler.setInputAction(function (event) {
+        console.log("点击事件event：",event);
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray = viewer.camera.getPickRay(event.position);
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        //获取倾斜摄影或模型点击处的坐标：场景坐标
+        //var cartesian = viewer.scene.pick(event.position);
+        console.log("cartesian:", cartesian);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        gatherPoint = viewer.entities.add({
+          name: 'point',
+          position: cartesian,
+          point: {
+            color: Cesium.Color.CHARTREUSE.withAlpha(1),
+            pixelSize: 10,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 1
+          }
+        });
+
+        var ellipsoid=viewer.scene.globe.ellipsoid;
+        var cartographic = ellipsoid.cartesianToCartographic(cartesian);
+        var obj = {};
+        obj.lat = Cesium.Math.toDegrees(cartographic.latitude);
+        obj.lng = Cesium.Math.toDegrees(cartographic.longitude);
+        obj.alt = cartographic.height;
+        console.log("采集的面坐标(经纬度)", obj);
+        //鼠标变成默认
+        document.getElementById("map").style.cursor = "default";
+        //移除地图点击事件
+        handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK)//移除事件
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='pointGather();' style='z-index:1000;position:absolute;top:50px;left:60px'>点采集
+  </el-button>
+
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function dynamicLabel(){
+      var west=118.0850887298584;
+      var south=24.439001083374023;
+      var east=118.1244813816513;
+      var north=24.451483144361173;
+      viewer.entities.add({
+        name: 'Rotating rectangle with rotating texture coordinate',
+        rectangle: {
+          //西南东北
+          coordinates: Cesium.Rectangle.fromDegrees(west, south, east, north),
+          material: new Cesium.ImageMaterialProperty({
+            image: new Cesium.CallbackProperty(drawCanvas, false),
+            transparent: true
+          }),
+          rotation: new Cesium.CallbackProperty(getRotationValue, false),
+          stRotation: new Cesium.CallbackProperty(getRotationValue, false)
+        }
+      });
+      addCenterPoint(west, south, east, north);
+      viewer.zoomTo(viewer.entities);
+    }
+
+    //动态纹理-Label
+    var rotation = Cesium.Math.toRadians(30);
+    var curCanvas = 'a';
+    function getRotationValue() {
+      rotation += 0.005;
+      return rotation;
+    }
+
+    function drawCanvas(time, result) {
+      var canvas = document.getElementById("canvas-" + curCanvas);
+      var context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.font = 'italic 40pt Calibri';
+      context.fillStyle = "yellow";
+      //x	开始绘制文本的 x 坐标位置（相对于画布）。
+      //y	开始绘制文本的 y 坐标位置（相对于画布）。
+      var text=Cesium.JulianDate.toDate(Cesium.JulianDate.now()).getTime();
+      context.fillText(text, 0, 85);
+      //console.log(Cesium.JulianDate.toDate(time).getTime());
+      if(curCanvas=='a'){
+        curCanvas="b";
+      }else{
+        curCanvas="a";
+      }
+      return canvas;
+    }
+
+    //添加中心点
+    function addCenterPoint(west, south, east, north){
+      var lng=(west+east)/2;
+      var lat=(south+north)/2;
+      var pointEntity=new Cesium.Entity({
+        id: 'pointid',
+        position: Cesium.Cartesian3.fromDegrees(lng, lat),
+        point: {
+          show: true,
+          color: Cesium.Color.SKYBLUE,
+          pixelSize: 3,
+          outlineColor: Cesium.Color.YELLOW,
+          outlineWidth: 1,
+          heightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,
+          scaleByDistance: new Cesium.NearFarScalar(1500, 2.0, 150000, 0.5),//随视角高度的，改变其图标大小
+        },
+        label:{
+          text: "矩形中心点",
+          font: "16px Helvetica",
+          style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+          fillColor:Cesium.Color.AZURE,
+          outlineColor:Cesium.Color.BLACK,
+          outlineWidth:2,
+          horizontalOrigin:Cesium.HorizontalOrigin.CENTER,
+          verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset:new Cesium.Cartesian2(0,-10),
+          heightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,
+          distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,2e6)
+        },
+      });
+      viewer.entities.add(pointEntity);
+    }
+
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='dynamicLabel();' style='z-index:1000;position:absolute;top:50px;left:60px'>动态纹理-Label
+  </el-button>
+  <canvas id="canvas-a" class="canvas" width="350" height="100"></canvas>
+  <canvas id="canvas-b" class="canvas" width="350" height="100"></canvas>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

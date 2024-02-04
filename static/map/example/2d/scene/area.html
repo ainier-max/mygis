@@ -1,0 +1,115 @@
+<!--在线国家天地图，双图层叠加-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <style>
+    .mapClass {
+      background-image: url(../../../img/mapBackground.jpg);
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+  </style>
+  <script>
+      function load(){
+          if(typeof (mapVue.$refs.map) != "undefined" ){
+              readData("china");
+          }else{
+              window.setTimeout(load, 100);
+          }
+      }
+      var xzqhLayers=[];
+      function readData(flag) {
+          for(var i=0;i<xzqhLayers.length;i++){
+              if(xzqhLayers[i].adcode=="350000" || xzqhLayers[i].adcode=="350200" || xzqhLayers[i].adcode=="350203"){
+                  window.mapBound = mapVue.$refs.map.getLayerBound(xzqhLayers[i]);
+                  console.log("多边形边框:", window.mapBound);
+              }
+              mapVue.$refs.map.removeLayer(xzqhLayers[i]);
+          }
+          xzqhLayers=[];
+          if(flag=="china"){
+              mapVue.$refs.map.setView([35.651787, 108.373451], 4);
+              addGeoLayer(JSON.parse(mapVue.$refs.map.readFile("../../../data/China.json")));
+          }else if(flag=="350000"){
+              addGeoLayer(JSON.parse(mapVue.$refs.map.readFile("../../../data/fujian.json")));
+              mapVue.$refs.map.setCenterByBound(window.mapBound);
+          }else if(flag=="350200"){
+              addGeoLayer(JSON.parse(mapVue.$refs.map.readFile("../../../data/xiamen.json")));
+              mapVue.$refs.map.setCenterByBound(window.mapBound);
+          }else if(flag=="350203"){
+              addGeoLayer(JSON.parse(mapVue.$refs.map.readFile("../../../data/siming.json")));
+              mapVue.$refs.map.setCenterByBound(window.mapBound);
+          }
+      }
+      function addGeoLayer(data){
+          console.log("data,",data);
+          for(var i=0;i<data.features.length;i++){
+              var option={};
+              option.weight=1;
+              option.color="#FF69B4";
+              //获取随机颜色
+              option.fillColor=getColor();
+              option.fillOpacity=0.8;
+              var zxqhlayer=mapVue.$refs.map.addPolygonByGeojson(JSON.stringify(data.features[i].geometry),option);
+              zxqhlayer.adcode=data.features[i].properties.adcode;
+              zxqhlayer.name=data.features[i].properties.name;
+              zxqhlayer.level=data.features[i].properties.level;
+              //绑定提示
+              var option={direction:'top',offset:[0,0],permanent:false,opacity:1,sticky:true};
+              var content="<div style='color:blue'>"+zxqhlayer.name+"</div>";
+              mapVue.$refs.map.bindTooltip(zxqhlayer,content,option);
+              mapVue.$refs.map.onLayerEvent("click",zxqhlayer, zxqhlayerClickEventCallBack);
+              xzqhLayers.push(zxqhlayer);
+          }
+      }
+      function getColor(){
+        var colourstr="#"
+        var coloruarr=["a","b","c","d","e","f","0","1","2","3","4","5","6","7","8","9"]
+        for(var p=0;p<6;p++){
+          var n=Math.floor(Math.random()*coloruarr.length+1)-1;
+          colourstr+=coloruarr[n];
+        }
+        return colourstr;
+      }
+      function zxqhlayerClickEventCallBack(e){
+          console.log("图层点击事件回调对象：", e.target);
+          if(e.target.adcode=="350000"){
+              readData("350000");
+          }else if(e.target.adcode=="350200"){
+              readData("350200");
+          }else if(e.target.adcode=="350203"){
+              readData("350203");
+          }
+      }
+  </script>
+</head>
+<body onload="load()">
+<div id="my-app">
+  <map-component ref="map" :id="id" class="mapClass"  :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <div style="position:absolute;left:50px;top:50px;z-index: 200;background: white;">
+    区域顺序点击:<a>福建省</a>--》<a>厦门市</a>--》<a>思明区</a>
+  </div>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            //config: window.tiandituMapConfig//有地图背景，去掉 .mapClass 样式即可去掉地图背景,否则会有条纹
+            config: window.geojsonMapConfig//无地图背景
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+

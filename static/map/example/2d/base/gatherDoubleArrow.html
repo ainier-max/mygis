@@ -1,0 +1,67 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+    var gatherIconOption={
+      iconUrl: '../images/gatherPoint.png',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+    }
+    function gather(){
+      mapVue.$refs.plotRef.gatherDoubleArrow(gatherIconOption,gatherCallback);
+    }
+    function gatherCallback(assaultDirectionLayer){
+      console.log("采集坐标信息为：",assaultDirectionLayer.gatherPosition);
+    }
+
+  </script>
+</head>
+<body>
+<!--JS版地图接入步骤3：搭建VUE组件元素-->
+<div id="my-app">
+  <!--
+ type：类型[js,vue]
+ config：地图配置信息
+ -->
+  <map-component ref="map" :id="id" :type="type" :config="config"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+
+  <plot-component ref="plotRef" id="plotid"
+                  :map-ref="id"
+                  style="position: absolute;top:20px;right: 20px;z-index: 200"
+  ></plot-component>
+
+  <el-button type="primary" onclick='gather();' style='z-index:1000;position:absolute;top:50px;left:50px'>采集钳击箭头
+  </el-button>
+
+
+</div>
+<script>
+  //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd'),
+      'plot-component': httpVueLoader('../../vue-map-component/tools/plot-component.vue', 'frontEnd')
+    }
+  });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

@@ -1,0 +1,323 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+<!--  <script src="../../../map/vue-lib/vuejs/vue.js"></script>-->
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <style>
+
+  </style>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //去掉地形
+      viewer.scene.terrainProvider = new Cesium.EllipsoidTerrainProvider({});
+      //初始定位
+      var obj={lng: 118.0850887298584, lat: 24.599001083374023, eyeHeight: 50000, pitch: -20, heading: 0.0, time: 3};
+      mapVue.$refs.map.viewerFlyToLonLat(obj);
+    }
+
+    var gatherPolyline = null;
+    var flyHeight =2000;//飞行高度
+
+
+    function polylineGather() {
+      var gatherPoints = [];
+      var points = [];
+      gatherPolyline = null;
+      var polylineGatherHandler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+      //鼠标变成加号
+      document.getElementById("map").style.cursor = "crosshair";
+      // 对鼠标按下事件的监听
+      polylineGatherHandler.setInputAction(function (event) {
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray = viewer.camera.getPickRay(event.position);
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        //获取倾斜摄影或模型点击处的坐标：场景坐标
+        //var cartesian = viewer.scene.pick(event.position);
+        //console.log("cartesian:", cartesian);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        var point = viewer.entities.add({
+          name: 'polyline_point',
+          position: cartesian,
+          point: {
+            color: Cesium.Color.WHITE,
+            pixelSize: 5,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 1
+          }
+        });
+        gatherPoints.push(point);
+        points.push(cartesian);
+
+        if (points.length >= 2) {
+          if (gatherPolyline == null) {
+            gatherPolyline = viewer.entities.add({
+              polyline: {
+                //positions: points,
+                positions: new Cesium.CallbackProperty(function (time, result) {
+                  return points;
+                }, false),
+                width: 10.0,
+                //clampToGround: true,
+                material: new Cesium.PolylineGlowMaterialProperty({
+                  color: Cesium.Color.CHARTREUSE.withAlpha(0.5)
+                })
+              }
+            });
+          } else {
+            //CallbackProperty监听point变化值会自动set
+
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      polylineGatherHandler.setInputAction(function (rightClick) {
+
+
+        //方法1
+        //var dke=points;
+        //方法2
+        console.log("gatherPolyline:",gatherPolyline);
+        var dke = gatherPolyline.polyline.positions.getValue();
+        console.log("采集的面坐标(笛卡尔)：", dke);
+        var objArr = [];
+        var xyArr=[];
+        var xyArrStr=[];
+        for (var i = 0; i < dke.length; i++) {
+          var ellipsoid = viewer.scene.globe.ellipsoid;
+          var cartesian3 = new Cesium.Cartesian3(dke[i].x, dke[i].y, dke[i].z);
+          var cartographic = ellipsoid.cartesianToCartographic(cartesian3);
+          //console.log("cartographic",cartographic);
+          var obj = {};
+          obj.lat = Cesium.Math.toDegrees(cartographic.latitude);
+          obj.lng = Cesium.Math.toDegrees(cartographic.longitude);
+          obj.alt = cartographic.height;
+          objArr.push(obj);
+          xyArr.push({ x: obj.lng, y: obj.lat });
+          xyArrStr.push([obj.lng,obj.lat]);
+        }
+        gatherPolyline.xyArr=xyArr;
+        console.log("采集的线坐标(经纬度)", xyArrStr.toString());
+        for (var i = 0; i < gatherPoints.length; i++) {
+          viewer.entities.remove(gatherPoints[i]);
+        }
+        gatherPoints = [];
+        //points = [];//注：points不可置空，如果置空，会导致地图上的点也不存在。
+        //鼠标变成加号
+        document.getElementById("map").style.cursor = "default";
+        //移除地图点击事件
+        polylineGatherHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK)//移除事件
+
+
+
+      }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+    }
+
+
+    function up2000(){
+      var dke = gatherPolyline.polyline.positions.getValue();
+      console.log("dke",dke);
+      var ellipsoid = viewer.scene.globe.ellipsoid;
+      var newDke=[];
+      for (var i = 0; i < dke.length; i++) {
+        var cartographic = ellipsoid.cartesianToCartographic(dke[i]);
+        var lat = Cesium.Math.toDegrees(cartographic.latitude);
+        var lng = Cesium.Math.toDegrees(cartographic.longitude);
+        var cartesianTemp = Cesium.Cartesian3.fromDegrees(lng, lat, flyHeight);
+        newDke.push(cartesianTemp);
+      }
+      console.log("newDke",newDke);
+      gatherPolyline.polyline.positions =newDke;
+    }
+
+    function startFly(){
+      console.log("开始飞行");
+      setTimeout(function () {
+        executeFly3D();
+      }, 200);
+    }
+    function executeFly3D(){
+      var start = Cesium.JulianDate.fromDate(new Date());
+      var stop = Cesium.JulianDate.addSeconds(start, 30000, new Cesium.JulianDate());
+      viewer.clock.startTime = start.clone();
+      viewer.clock.stopTime = stop.clone();
+      viewer.clock.currentTime = start.clone();
+      viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
+      viewer.clock.multiplier = 5;//值越大，飞行越快
+      viewer.clock.canAnimate = false;
+      viewer.clock.shouldAnimate = true;//设置时间轴动态效果
+
+      var _position = computeCirclularFlight(start);
+
+      /**
+       var entityFly = viewer.entities.add({
+                availability: new Cesium.TimeIntervalCollection([new Cesium.TimeInterval({
+                    start: start,
+                    stop: stop
+                })]),
+                position: _position,
+                orientation: new Cesium.VelocityOrientationProperty(_position),
+                point:{
+                    color:Cesium.Color.RED,
+                    outlineColor:Cesium.Color.WHITE,
+                    outlineWidth:2,
+                    pixelSize:15,
+                },
+            });
+       **/
+
+      var url="../../../data/3dmodel/CesiumAir/Cesium_Air.glb";
+      var entityFly=viewer.entities.add({
+        id:"3dmodel",
+        name: url,
+        position: _position,
+        orientation: new Cesium.VelocityOrientationProperty(_position),//设置模型方向
+        model: {
+          uri: url,
+          minimumPixelSize: 248,
+          maximumScale: 20000,
+        },
+
+      });
+
+      viewer.trackedEntity = entityFly;
+
+
+
+    }
+    //计算飞行
+    function computeCirclularFlight(start) {
+      //console.log("start",start);
+      var position = gatherPolyline.xyArr;
+      var property = new Cesium.SampledPositionProperty();
+      for (var i = 0; i < position.length; i++) {
+        if (i === 0) {
+          var time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
+          var _position = Cesium.Cartesian3.fromDegrees(position[i].x, position[i].y, flyHeight);
+          property.addSample(time, _position);
+        }
+        if (i < 10000 && i > 0) {
+          var position_a = new Cesium.Cartesian3(property._property._values[i * 3 - 3], property._property._values[i * 3 - 2], property._property._values[i * 3 - 1]);
+          if (i < 976) {
+            var _position = Cesium.Cartesian3.fromDegrees(position[i].x, position[i].y, flyHeight);
+          }
+          else if (i > 975 && i < 986) {
+            var _position = Cesium.Cartesian3.fromDegrees(position[i].x, position[i].y, flyHeight);
+          }
+          else if (i > 985) {
+            var _position = Cesium.Cartesian3.fromDegrees(position[i].x, position[i].y, flyHeight);
+          }
+
+          var positions = [Cesium.Ellipsoid.WGS84.cartesianToCartographic(position_a), Cesium.Ellipsoid.WGS84.cartesianToCartographic(_position)];
+          var a = new Cesium.EllipsoidGeodesic(positions[0], positions[1]);
+          var long = a.surfaceDistance;
+          var _time = long/50;
+          var time = Cesium.JulianDate.addSeconds(property._property._times[i - 1], _time, new Cesium.JulianDate());
+
+          property.addSample(time, _position);
+        }
+      }
+      return property;
+    }
+
+    function stopFly(){
+      var clockViewModel = this.viewer.clockViewModel;
+      if (clockViewModel.shouldAnimate) {
+        clockViewModel.shouldAnimate = false;
+      } else if (this.viewer.clockViewModel.canAnimate) {
+        clockViewModel.shouldAnimate = true;
+      }
+
+    }
+
+    function forwardFly(){
+      var clockViewModel = this.viewer.clockViewModel;
+      var multiplier = clockViewModel.multiplier;
+      if (multiplier < 0) {
+        clockViewModel.multiplier = -multiplier;
+      }
+      clockViewModel.shouldAnimate = true;
+    }
+    function backwardFly(){
+
+      var clockViewModel = this.viewer.clockViewModel;
+      var multiplier = clockViewModel.multiplier;
+      if (multiplier > 0) {
+        clockViewModel.multiplier = -multiplier;
+      }
+      clockViewModel.shouldAnimate = true;
+    }
+
+    function hideFly(){
+      gatherPolyline.show=false;
+    }
+    function showFly(){
+      gatherPolyline.show=true;
+    }
+
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component  ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <input type="button" onclick='polylineGather();' value="1.采集线路"
+         style='position:absolute;left:50px;top:50px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='up2000();' value="2.上移2000米"
+         style='position:absolute;left:200px;top:50px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='startFly();' value="开始飞行"
+         style='position:absolute;left:50px;top:100px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='stopFly();' value="停止(继续)飞行"
+         style='position:absolute;left:200px;top:100px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='forwardFly();' value="向前飞行"
+         style='position:absolute;left:50px;top:150px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='backwardFly();' value="向后飞行"
+         style='position:absolute;left:200px;top:150px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='hideFly();' value="隐藏飞行路线"
+         style='position:absolute;left:50px;top:200px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+  <input type="button" onclick='showFly();' value="显示飞行路线"
+         style='position:absolute;left:250px;top:200px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    },
+  });
+</script>
+</body>
+</html>

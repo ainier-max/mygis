@@ -1,0 +1,101 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <!--着色器-->
+  <script src="../../../map/vue-lib/mapjs/cesium/material/dynamicFlowMaterial.js"></script>
+  <script src="../../../map/vue-lib/mapjs/cesium/initMap.js"></script>
+
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      //初始化地图
+      initMap();
+      //定位
+      var obj = {lng:118.1270887298584, lat: 24.449001083374023,eyeHeight:7000,pitch:-20,heading:0.0,time:1};
+      viewerFlyToLonLat(obj);
+      //关闭地形检测（必须得设置该属性），否则扩散圈会移动
+      viewer.scene.globe.depthTestAgainstTerrain = true;
+    }
+
+
+    function dynamicFlowMaterial() {
+
+      for (var i = 0; i < 50; i++) {
+        var lat = 24.44 + Math.random() * 0.10;
+        var lon = 118.08 + Math.random() * 0.10;
+
+        var heightTemp=500+ Math.random() * 2000;
+
+        var speed=Math.random() * 10+5;
+
+        let entity = viewer.entities.add({
+          polyline: {
+            positions:  Cesium.Cartesian3.fromDegreesArrayHeights([
+              lon,
+              lat,
+              10,
+              lon,
+              lat,
+              heightTemp
+            ]),
+            width: 2,
+            material: new DynamicFlowMaterialProperty(Cesium.Color.YELLOW,speed,0,0.3)
+          },
+        });
+      }
+
+
+
+
+
+      let lon1 = 118.0950887298584;
+      let lat1 = 24.439001083374023;
+
+      let entity1 = viewer.entities.add({
+        polyline: {
+          positions:  Cesium.Cartesian3.fromDegreesArrayHeights([
+            lon1,
+            lat1,
+            10,
+            lon1,
+            lat1,
+            800
+          ]),
+          width: 2,
+          material: new DynamicFlowMaterialProperty(Cesium.Color.RED,10,0,0.3)
+        },
+      });
+    }
+  </script>
+</head>
+
+<body onload="loadEnd()">
+<div id="my-app">
+  <el-button type="primary" onclick='dynamicFlowMaterial();' style='z-index:1000;position:absolute;top:50px;left:60px'>动态流线
+  </el-button>
+  <div id="map" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></div>
+
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+
+    },
+    components: {
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--    <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      //速度m/s
+      var mapData={
+          "10":5000,
+          "11":4000,
+          "12":3000,
+          "13":2000,
+          "14":1000,
+          "15":500
+      }
+      /**
+       * 添加点击事件
+       */
+      function addMapZoomTest(){
+          //监控地图开始移动事件
+          mapVue.$refs.map.onMapEvent("zoomstart", onMapZoomStart,"zoomstart");
+          //监控地图结束移动事件
+          mapVue.$refs.map.onMapEvent("zoomend", onMapZoomEnd,"zoomend");
+          var latlngs=[
+              [24.487152099609375,118.11126708984375],[24.48577880859375,117.99934387207033],[24.648513793945316,118.03504943847656],[24.666366577148438,118.14971923828124],[24.6478271484375,118.29116821289064],[24.56474304199219,118.30696105957033],[24.45281982421875,118.27949523925783],[24.575042724609375,118.12637329101562]
+          ];
+          if(typeof (window.polylineTest)=="undefined"){
+              //画线(线只需要一次)
+              addPolylineTest(latlngs);
+          }
+          var zoom = mapVue.$refs.map.getMapZoom();
+          console.log("地图级别:", zoom);
+          var speed=mapData[zoom];
+          //如果找不到速度值，则speed默认为1000
+          if(typeof (speed)=="undefined"){
+              if(zoom<10){
+                  speed=10000;
+              }else{
+                  speed=200;
+              }
+          }
+          console.log("速度值：",speed);
+          //图标移动
+          addMovingMarkerTest(latlngs,speed);
+      }
+      //画线
+      function addPolylineTest(latlngs) {
+          var polylineJSON = {};
+          polylineJSON.xys =latlngs;
+          //线的样式
+          polylineJSON.option = {};
+          //线的宽度
+          polylineJSON.option.weight = 5;
+          //线的颜色
+          polylineJSON.option.color = "#f18";
+          window.polylineTest = mapVue.$refs.map.addPolyline(polylineJSON);
+          console.log("polyline", window.polylineTest);
+      }
+      function onMapZoomStart() {
+          console.log("onMapZoomStart");
+          if (window.movingMarkerLayer != null) {
+              try {
+                  mapVue.$refs.map.removeLayer(window.movingMarkerLayer);
+              }catch(err) {
+                  console.log("移动图标不存在");
+                  return;
+              }
+          }
+      }
+      function onMapZoomEnd() {
+          console.log("开始移动图标",window.movingMarkerLayer);
+          console.log("移动的线段区间：",window.movingMarkerLayer._currentLine[1]);
+          var new_xy=[];
+          var newStartPoint=[window.movingMarkerLayer._latlng.lat,window.movingMarkerLayer._latlng.lng];
+          console.log("重新开始的移动点：",newStartPoint);
+          new_xy.push(newStartPoint);
+          var index=window.movingMarkerLayer._latlngs.indexOf(window.movingMarkerLayer._currentLine[1]);
+          console.log("开始下标：",index);
+          for(var i=index;i<window.movingMarkerLayer._latlngs.length;i++){
+              var arrTemp=[window.movingMarkerLayer._latlngs[i].lat,window.movingMarkerLayer._latlngs[i].lng];
+              new_xy.push(arrTemp);
+          }
+          var zoom = mapVue.$refs.map.getMapZoom();
+          console.log("地图级别:", zoom);
+          var new_speed=mapData[zoom];
+          //如果找不到速度值，则speed默认为1000
+          if(typeof (new_speed)=="undefined"){
+              if(zoom<10){
+                  new_speed=10000;
+              }else{
+                  new_speed=200;
+              }
+          }
+          console.log("新速度值：",new_speed);
+          addMovingMarkerTest(new_xy,new_speed);
+      }
+      /**
+       * 移动图标,注意：图标只支持一个移动图标的一条轨迹
+       */
+      function addMovingMarkerTest(latlngs,speed) {
+          var movingMarkerJson = {};
+          //图标移动路线点
+          movingMarkerJson.xys = latlngs;
+          //为每个点创建气泡框
+          for (var i = 0; i < movingMarkerJson.xys.length; i++) {
+              var popupJson = {};
+              //气泡框的位置
+              popupJson.xy = movingMarkerJson.xys[i];
+              //气泡框内容
+              popupJson.content = "气泡框" + i;
+              popupJson.option = {offset: [0, 0]};
+              movingMarkerJson.xys[i].popup = mapVue.$refs.map.createPopup(popupJson);
+          }
+          //创建移动图标
+          var iconJson = {};
+          iconJson.option = {};
+          iconJson.option.iconUrl = "../images/bike.png";
+          iconJson.option.iconAnchor = [11, 39];//坐标固定在图标的哪个点，[0,0]表示图标的左上角
+          var markerIcon = mapVue.$refs.map.createIcon(iconJson);
+          movingMarkerJson.icon = markerIcon;
+          //移动速度
+          movingMarkerJson.speed = speed;//单位：米/秒
+          //移动图标移动到点的时候是否弹出气泡框
+          movingMarkerJson.movingMarkerShowPopup = false;
+          //移动是否居中
+          movingMarkerJson.movingMarker = false;
+
+          //注意：所有点尾巴，固定长度，固定点数只能有一个为true
+          //(1)展示所有点尾巴
+          movingMarkerJson.showPolyline_flag = false;
+          //是否展示尾巴(固定长度)
+          movingMarkerJson.showTail_flag = false;
+          //是否展示尾巴(固定点数)
+          movingMarkerJson.showTailByPoint_flag = false;
+          //是否展示尾巴(固定点数值，当showTailByPoint_flag时必须设置该值)
+          movingMarkerJson.tailPoint = 5;
+          //移动到最后面是否删除
+          movingMarkerJson.movingMarkerEndRemoveFlag = true;
+          window.movingMarkerLayer = mapVue.$refs.map.addMovingMarker(movingMarkerJson);
+          console.log("movingMarkerLayer:", window.movingMarkerLayer);
+
+      }
+
+      function remove(){
+          if(window.movingMarkerLayer!=null){
+              mapVue.$refs.map.removeLayer(window.movingMarkerLayer);
+              window.movingMarkerLayer=null;
+          }
+          //移除监控地图开始移动事件
+          mapVue.$refs.map.offMapEvent("zoomstart", onMapZoomStart,"zoomstart");
+          //移除监控地图开始移动事件
+          mapVue.$refs.map.offMapEvent("zoomend", onMapZoomEnd,"zoomend");
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addMapZoomTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    图标移动并开启地图缩放监听事件
+  </el-button>
+  <el-button type="primary" onclick='remove();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    删除移动图标并关闭地图缩放监听事件
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            //'map-component': httpVueLoader('leaflet', 'backEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>

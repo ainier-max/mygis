@@ -1,0 +1,79 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--axios依赖-->
+  <script src="../../../map/vue-lib/vuejs/axios.min.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+      function addressPositiveTest() {
+          var keyword = document.getElementById("keyword").value;
+          var param = {};
+          //350203:思明区;350206:湖里区
+          param.regioncode = "350203,350206";
+          param.type = "101005,101007";
+          param.keyword = keyword;
+          param.count = "10";
+          mapVue.$refs.api.addressPositive(param, addressPositiveCB);
+      }
+
+      function addressPositiveCB(resp) {
+          //结果上图
+          var result = resp.data[0].objects;
+          console.log("正向匹配结果", result);
+          for (var i = 0; i < result.length; i++) {
+              var markerJSON = {};
+              //xy坐标
+              markerJSON.xy = [Number(result[i].lat), Number(result[i].lng)];
+              //绝对路径
+              markerJSON.iconUrl = "../images/blue.png";
+              //图片偏移（坐标固定在图标的哪个点，[0,0]表示图标的左上角）
+              markerJSON.iconAnchor = [16, 16];
+              //图片大小
+              markerJSON.width = 32;
+              markerJSON.height = 32;
+              var marker = mapVue.$refs.map.addMarker(markerJSON);
+              //绑定气泡框内容
+              marker.html = "<div>地址：" + result[i].fullname + "</div>";
+              mapVue.$refs.map.bindPopup(marker);
+          }
+      }
+  </script>
+</head>
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <api-component ref="api" :id="apiid" :axios="axios"></api-component>
+  <input id="keyword" value="厦门市" placeholder="请输入中文关键字"
+         style='z-index:1000;position:absolute;top:50px;left:50px;width: 200px;height: 35px'>
+  <el-button type="primary" onclick='addressPositiveTest();' style='z-index:1000;position:absolute;top:50px;left:270px'>
+    正向匹配
+  </el-button>
+</div>
+<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            apiid: "api",
+            type: "js",
+            config: window.defaultMapConfig,
+            axios: axios,
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd'),
+            'api-component': httpVueLoader('../../vue-map-component/tools/api-component.vue', 'frontEnd'),
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

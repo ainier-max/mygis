@@ -1,0 +1,161 @@
+<!--
+腾讯地图瓦片与Google地图瓦片区别和联系
+1）腾讯地图瓦片与Google的地图瓦片切割方法相同，只不过腾讯地图瓦片完全遵循TMS标准，Google地图瓦片则是TMS的一种变种。
+2）地图投影坐标系均采用Web Mercator投影，地图瓦片分辨率也完全一致。
+3）腾讯地图瓦片的坐标原点在左下角【-85.05112877980659,-180】，Google 地图瓦片的坐标原点在左上角【85.05112877980659,-180】。
+4）腾讯瓦片的最小缩放级别为4级，通过与腾讯低级别瓦片地址的对比分析，得出其ULR地址与xyz参数的对应关系如下：
+腾讯瓦片计算方法：URL = z  /  Math.Floor(x / 16.0)  / Math.Floor(y / 16.0) / x_y.png，其中x,y,z为TMS瓦片坐标参数。
+5）与Google瓦片坐标的关系，上式中腾讯地图瓦片坐标的x,z与Google 瓦片坐标系的X 、Z是相等的，Y 的转换关系为：Y(Tencent) +  Y(Google) = Math.pow(2，zoom) - 1
+6）为了保密，腾讯地图与Google地图在大陆地区均进行了偏移处理，采用的是国家火星坐标系GCJ-02。
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+</head>
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <div style="position:absolute;left:50px;top:50px;z-index: 200;background: white;width: 500px">
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">反色(invert)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="invertVal"></el-slider></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">灰色(grayscale)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="grayscaleVal"></el-slider></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">亮度(brightness)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="brightnessVal" :max="200"></el-slider></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">对比度(contrast)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="contrastVal" :max="200"></el-slider></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">色相旋转(hue)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="hueVal" :max="360"></el-slider></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">饱和度(saturate)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="saturateVal" :max="800"></el-slider></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="8"><div style="text-align: left;margin-top:5px;margin-left: 5px;color:#8492a6">深褐色(sepia)</div></el-col>
+      <el-col :span="16" align="center"><el-slider style="width: 300px" v-model="sepiaVal" :max="100"></el-slider></el-col>
+    </el-row>
+
+    <el-input  type="textarea"  v-model="stylestr" :rows="2" style='z-index:1000;'></el-input>
+
+  </div>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.TengXunConfig,
+            stylestr:'',
+            invertVal:0,
+            grayscaleVal:0,
+            brightnessVal:100,
+            contrastVal:100,
+            hueVal:0,
+            saturateVal:100,
+            sepiaVal:0,
+        },
+        watch: {
+            invertVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+newVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+this.brightnessVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+this.saturateVal+"%) sepia("+this.sepiaVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+            grayscaleVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+newVal+"%) brightness("+this.brightnessVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+this.saturateVal+"%) sepia("+this.sepiaVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+            brightnessVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+newVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+this.saturateVal+"%) sepia("+this.sepiaVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+            contrastVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+this.brightnessVal+"%) contrast("+newVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+this.saturateVal+"%) sepia("+this.sepiaVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+            hueVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+this.brightnessVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+newVal+"deg) saturate("+this.saturateVal+"%) sepia("+this.sepiaVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+            saturateVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+this.brightnessVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+newVal+"%) sepia("+this.sepiaVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+            sepiaVal: {
+                handler(newVal, oldVal) {
+                    this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+this.brightnessVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+this.saturateVal+"%) sepia("+newVal+"%)";
+                    console.log("this.stylestr:",this.stylestr);
+                    document.getElementById("map").style.filter=this.stylestr;
+                },
+                deep: true
+            },
+
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        },
+        methods: {
+            formatBrightness(val) {
+                return val * 2;
+            }
+        },
+        mounted() {
+            this.stylestr="invert("+this.invertVal+"%) "+"grayscale("+this.grayscaleVal+"%) brightness("+this.brightnessVal+"%) contrast("+this.contrastVal+"%) hue-rotate("+this.hueVal+"deg) saturate("+this.saturateVal+"%) sepia("+this.sepiaVal+"%)";
+        }
+
+    });
+</script>
+</body>
+</html>
+
+<!--
+1:filter: Invert(100%) grayscale(100%);
+2:filter: Invert(30%) grayscale(100%) saturate(700%) brightness(90%) contrast(200%);
+-->
+
+
+

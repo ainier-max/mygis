@@ -1,0 +1,77 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <!--着色器-->
+  <script src="../../../map/vue-lib/mapjs/cesium/material/dynamicWallMaterial.js"></script>
+
+  <script src="../../../map/vue-lib/mapjs/cesium/initMap.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      //初始化地图
+      initMap();
+      //定位
+      var obj = {lng:118.0850887298584, lat: 24.439001083374023,eyeHeight:5000,pitch:-65,heading:0.0,time:1};
+      viewerFlyToLonLat(obj);
+    }
+
+
+    function addWall() {
+      viewer.entities.add({
+        name: "动态立体墙",
+        wall: {
+          positions: Cesium.Cartesian3.fromDegreesArray([
+            118.08336708922504, 24.460059477621492,
+            118.08661784282492, 24.44388550198702,
+            118.10353961223556, 24.449625366707494,
+            118.09575685696713, 24.46347023074697,
+            118.08336708922504, 24.460059477621492,
+          ]),
+          maximumHeights: [300, 300, 300, 300, 300],
+          minimumHeights: [0, 0, 0, 0, 0],
+          /**
+           * color（颜色）：颜色
+           * speed（速度）：越低越快
+           * count（条数）：分隔条数
+           * freely（纵横）：vertical纵，cross横
+           * direction（方向）：
+           *    纵：'-'（由下到上），'+'（由上到下）
+           *    横：'-'（顺时针），'+'（逆时针）
+           */
+          material: new DynamicWallMaterialProperty(Cesium.Color.YELLOW, '50.0','1.0','vertical','-',"../../vue-lib/mapjs/cesium/material/dynamicWallMaterial.png")
+
+        }
+      })
+      viewer.zoomTo(viewer.entities);
+    }
+  </script>
+</head>
+
+<body onload="loadEnd()">
+<div id="my-app">
+  <el-button type="primary" onclick='addWall();' style='z-index:1000;position:absolute;top:50px;left:60px'>动态立体墙
+  </el-button>
+
+  <div id="map" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></div>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+
+    },
+    components: {
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

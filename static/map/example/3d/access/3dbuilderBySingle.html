@@ -1,0 +1,148 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+<!--  <meta name="referrer" content="no-referrer-when-downgrade"/>-->
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer=null;
+
+    var pickedFeature=null;//所选择的对象
+    var lastColor=null;//上一个颜色
+    function loadBefore(){
+      console.log("地图加载之前的调用");
+    }
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer=mapVue.$refs.map.viewer;
+
+      //在线调用需要token
+      Cesium.Ion.defaultAccessToken=window.cesiumAccessToken;
+      //定位
+      var obj = {lng: 121.4957, lat: 31.2418,eyeHeight:1880,pitch:-25,heading:87.0,time:1};
+      viewerFlyToLonLat(obj);
+      //3D建筑物
+      var city = viewer.scene.primitives.add(Cesium.createOsmBuildings());
+      city.shadows=false;
+      city.maximumMemoryUsage=100;
+      city.maximumScreenSpaceError=50;
+
+      console.log("city:", city);
+      // 通过鼠标点击建筑物获取改建筑物的所有字段以及内容
+      var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+      handler.setInputAction(function(movement) {
+        if(typeof (pickedFeature)!="undefined" && pickedFeature!=null){
+          if(typeof (lastColor)!="undefined" && lastColor!=null){
+            pickedFeature.color=lastColor;
+          }else{
+            pickedFeature.color=new Cesium.Color(1, 1, 1, 1);
+          }
+        }
+        //console.log("movement",movement);
+        pickedFeature = viewer.scene.pick(movement.position);
+        //保存上一个颜色
+        if(typeof (pickedFeature)!="undefined" && pickedFeature!=null ){
+          lastColor=pickedFeature.color;
+          pickedFeature.color = Cesium.Color.LIME;
+        }else{
+          console.log("未选中建筑物！");
+        }
+        if (pickedFeature instanceof Cesium.Cesium3DTileFeature) {
+          var propertyNames = pickedFeature.getPropertyNames();
+          var length = propertyNames.length;
+          for (var i = 0; i < length; ++i) {
+            var propertyName = propertyNames[i];
+            if(propertyName=="name"){
+              console.log('名称: ' + pickedFeature.getProperty(propertyName));
+            }
+            if(propertyName=="cesium#estimatedHeight"){
+              console.log('高度: ' + pickedFeature.getProperty(propertyName));
+            }
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    }
+
+
+    var flyToEntity = null;
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          var flyToHeight=updatedPositions[0].height;
+          if(typeof(flyToHeight)=="undefined"){
+            updatedPositions.obj.height = 0;
+          }else{
+            updatedPositions.obj.height = flyToHeight;
+          }
+          console.log("地形高度：", updatedPositions.obj.height);
+          if (flyToEntity) {
+            viewer.entities.remove(flyToEntity);
+          }
+          flyToEntity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 0,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0.9),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+              outlineWidth: 0
+            }
+          });
+          viewer.entities.add(flyToEntity);
+          var flyPromise = viewer.flyTo(flyToEntity, {
+            duration: updatedPositions.obj.time,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(updatedPositions.obj.heading),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+          // 飞行完后
+          flyPromise.then(function (flyPromise) {
+            console.log("飞行结束");
+          }).otherwise(function (error) {
+            console.log(error);
+          });
+        });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <!--filter:invert(100%);-->
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-before="loadBeforeFun" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载之前的回调方法
+      loadBeforeFun: "loadBefore",
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

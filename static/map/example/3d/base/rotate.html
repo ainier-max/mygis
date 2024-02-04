@@ -1,0 +1,119 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer=null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      addPoint();
+    }
+
+    function StartRotate() {
+      var options = {
+        lng: 118.0850887298584,
+        lat: 24.439001083374023,
+        height: 15.8,
+        heading: 0.0,
+        pitch: 0.0,
+        roll: 0.0
+      };
+      var position = Cesium.Cartesian3.fromDegrees(options.lng, options.lat, options.height);
+      // 相机看点的角度，如果大于0那么则是从地底往上看，所以要为负值，这里取-30度
+      var pitch = Cesium.Math.toRadians(-30);
+      // 给定飞行一周所需时间，比如20s, 那么每秒转动度数
+      var angle = 360 / 20;//每秒转动角度,该设置需要转动20秒才一周
+      // 给定相机距离点多少距离飞行，这里取值为5000m
+      var distance = 5000;
+      var startTime = Cesium.JulianDate.fromDate(new Date());
+
+      //只旋转10秒
+      var stopTime = Cesium.JulianDate.addSeconds(startTime, 20, new Cesium.JulianDate());
+      viewer.clock.stopTime = stopTime.clone();     // 结速时间
+
+      viewer.clock.startTime = startTime.clone();  // 开始时间
+      viewer.clock.currentTime = startTime.clone(); // 当前时间
+      viewer.clock.clockRange = Cesium.ClockRange.CLAMPED; // 行为方式
+      viewer.clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK; // 时钟设置为当前系统时间; 忽略所有其他设置。
+      // 相机的当前heading
+      var initialHeading = viewer.camera.heading;
+      var Exection = function TimeExecution() {
+        // 当前已经过去的时间，单位s
+        var delTime = Cesium.JulianDate.secondsDifference(viewer.clock.currentTime, viewer.clock.startTime);
+        var heading = Cesium.Math.toRadians(delTime * angle) + initialHeading;
+        viewer.scene.camera.setView({
+          destination: position, // 点的坐标
+          orientation: {
+            heading: heading,
+            pitch: pitch,
+
+          }
+        });
+        viewer.scene.camera.moveBackward(distance);
+        //console.log("viewer.clock.currentTime",viewer.clock.currentTime);
+        //console.log("viewer.clock.stopTime:",viewer.clock.stopTime);
+        if (Cesium.JulianDate.compare(viewer.clock.currentTime, viewer.clock.stopTime) >= 0) {
+          viewer.clock.onTick.removeEventListener(Exection);
+        }
+      };
+      viewer.clock.onTick.addEventListener(Exection);
+    }
+
+    function StopRotate() {
+      viewer.clock.stopTime = viewer.clock.startTime.clone();
+    }
+
+    function addPoint() {
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023),
+        point: {
+          show: true,
+          color: Cesium.Color.SKYBLUE,
+          pixelSize: 10,
+          outlineColor: Cesium.Color.YELLOW,
+          outlineWidth: 3,
+          scaleByDistance: new Cesium.NearFarScalar(1500, 2.0, 150000, 0.5),//随视角高度的，改变其图标大小
+        },
+      });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='StartRotate();' style='z-index:1000;position:absolute;top:50px;left:60px'>开始旋转一周
+  </el-button>
+  <el-button type="primary" onclick='StopRotate();' style='z-index:1000;position:absolute;top:100px;left:50px'>停止旋转
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    /*
+     * 世界坐标：Cartesian   (笛卡尔空间直角坐标系:Cartesian3)
+     * 经纬度坐标
+     * 弧度坐标：Cartographic
+     * 屏幕坐标：Pick
+     */
+
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    //经纬度-->世界坐标（先转弧度，再转世界坐标）
+    function lngLatToCartesian() {
+      var lng = 118.0850887298584;
+      var lat = 24.439001083374023;
+      var height = 10000;
+      //方法1：直接转换
+      var cartesian1 = Cesium.Cartesian3.fromDegrees(lng, lat, height);
+      console.log("方法1：经纬度-->世界坐标：", cartesian1);
+      //方法2：先转换成弧度再转换成世界坐标
+      var ellipsoid = viewer.scene.globe.ellipsoid;
+      var cartographic = Cesium.Cartographic.fromDegrees(lng, lat, height);
+      var cartesian2 = ellipsoid.cartographicToCartesian(cartographic);
+      console.log("方法2：经纬度-->世界坐标：", cartesian2);
+    }
+
+    //世界坐标-->经纬度（先转弧度，再转经纬度）
+    function cartesianToLngLat() {
+      //该测试值为function lngLatToCartesian()所执行的结果
+      var x = -2739531.1065610424;
+      var y = 5133901.101058983;
+      var z = 2626765.040376103;
+      var ellipsoid = viewer.scene.globe.ellipsoid;
+      var cartesian3 = new Cesium.Cartesian3(x, y, z);
+      var cartographic = ellipsoid.cartesianToCartographic(cartesian3);
+      var lat = Cesium.Math.toDegrees(cartographic.latitude);
+      var lng = Cesium.Math.toDegrees(cartographic.longitude);
+      var height = cartographic.height;
+      console.log("世界坐标-->经纬度：");
+      console.log(lng + "," + lat + "," + height);
+    }
+
+    //经纬度-->转弧度
+    function lngLatToRadians() {
+      var lng = 118.0850887298584;
+      var lat = 24.439001083374023;
+      var lngRadians = Cesium.Math.toRadians(lng);
+      var latRadians = Cesium.Math.toRadians(lat);
+      console.log("经纬度-->弧度：");
+      console.log(lngRadians + "," + latRadians);
+    }
+
+    //弧度-->经纬度
+    function radiansToLngLat() {
+      var lngRadians = 2.060973595845678;
+      var latRadians = 0.42654103480333794;
+      var lng = Cesium.Math.toDegrees(lngRadians);
+      var lat = Cesium.Math.toDegrees(latRadians);
+      console.log("弧度-->经纬度：");
+      console.log(lng + "," + lat);
+    }
+
+    //世界坐标-->弧度（先转经纬度再转弧度）
+    function cartesianToRadians() {
+      var x = -2739531.1065610424;
+      var y = 5133901.101058983;
+      var z = 2626765.040376103;
+      var cartesian3 = new Cesium.Cartesian3(x, y, z);
+      var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian3);
+      console.log("世界坐标-->弧度：");
+      console.log(cartographic);
+    }
+
+    //弧度-->世界坐标（先转经纬度再转世界坐标）
+    function radiansToCartesian() {
+      var longitude = 2.060973595845678;
+      var latitude = 0.42654103480333794;
+      var height = 10000;
+      var cartographic = new Cesium.Cartographic(longitude, latitude, height)
+      var cartesian = viewer.scene.globe.ellipsoid.cartographicToCartesian(cartographic);
+      console.log("弧度-->世界坐标：", cartesian);
+    }
+
+    //世界坐标-->屏幕坐标(窗口坐标)
+    function cartesianToPick() {
+      // var x = -2739531.1065610424;
+      // var y = 5133901.101058983;
+      // var z = 2626765.040376103;
+      // var cartesian3 = new Cesium.Cartesian3(x, y, z);
+      // console.log("cartesian3",cartesian3);
+      var lng = 118.0850887298584;
+      var lat = 24.439001083374023;
+      var position = Cesium.Cartesian3.fromDegrees(lng,lat);
+      //console.log("position", position);
+      var pick = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, position);
+      console.log("世界坐标-->屏幕坐标(窗口坐标)：", pick);
+    }
+    //屏幕坐标-->世界坐标
+    function pickToCartesian(){
+      var pick= new Cesium.Cartesian2(252,377);
+      var cartesian = viewer.scene.globe.pick(viewer.camera.getPickRay(pick), viewer.scene);
+      console.log("屏幕坐标-->世界坐标：",cartesian);
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+
+  <el-button type="primary" onclick='lngLatToCartesian();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    经纬度-->世界坐标
+  </el-button>
+
+  <el-button type="primary" onclick='cartesianToLngLat();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    世界坐标-->经纬度
+  </el-button>
+
+  <el-button type="primary" onclick='lngLatToRadians();' style='z-index:1000;position:absolute;top:180px;left:50px'>
+    经纬度-->弧度
+  </el-button>
+  <el-button type="primary" onclick='radiansToLngLat();' style='z-index:1000;position:absolute;top:230px;left:50px'>
+    弧度-->经纬度
+  </el-button>
+
+  <el-button type="primary" onclick='cartesianToRadians();' style='z-index:1000;position:absolute;top:310px;left:50px'>
+    世界坐标-->弧度
+  </el-button>
+  <el-button type="primary" onclick='radiansToCartesian();' style='z-index:1000;position:absolute;top:360px;left:50px'>
+    弧度-->世界坐标
+  </el-button>
+
+  <el-button type="primary" onclick='cartesianToPick();' style='z-index:1000;position:absolute;top:440px;left:50px'>
+    世界坐标-->屏幕坐标
+  </el-button>
+
+  <el-button type="primary" onclick='pickToCartesian();' style='z-index:1000;position:absolute;top:490px;left:50px'>
+    屏幕坐标-->世界坐标
+  </el-button>
+
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

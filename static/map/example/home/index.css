@@ -1,0 +1,85 @@
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0
+}
+::-webkit-scrollbar {/*滚动条整体样式*/
+  width: 5px;     /*高宽分别对应横竖滚动条的尺寸*/
+  height: 1px;
+}
+::-webkit-scrollbar-thumb {/*滚动条里面小方块*/
+  border-radius: 5px;
+  background: #a8a9ab;
+}
+::-webkit-scrollbar-track {/*滚动条里面轨道*/
+  border-radius: 5px;
+  background: #f0f2f5;
+}
+.mapMain{
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.left{
+  position: relative;
+  height: 100vh;
+  overflow: auto;
+  float: left;
+}
+.right{
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+}
+.resize-box {
+  position: absolute;
+  top: 0;
+  right: 7px;
+  bottom: 0;
+  left: 0;
+  overflow-x: hidden;
+}
+.resize-bar {
+  width: 50vw;
+  height: inherit;
+  resize: horizontal;
+  cursor: ew-resize;
+  opacity: 0;
+  overflow: scroll;
+}
+/* 拖拽线 */
+.resize-line {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  border-right: 3px solid #eee;
+  border-left: 2px solid #bbb;
+  pointer-events: none;
+}
+.resize-bar:hover ~ .resize-line,
+.resize-bar:active ~ .resize-line {
+  border-left: 1px dashed skyblue;
+}
+.resize-bar::-webkit-scrollbar {
+  width: 50vw;
+  height: inherit;
+}
+
+/* Firefox只有下面一小块区域可以拉伸 */
+@supports (-moz-user-select: none) {
+  .resize-bar:hover ~ .resize-line,
+  .resize-bar:active ~ .resize-line {
+    border-left: 1px solid #bbb;
+  }
+  .resize-bar:hover ~ .resize-line::after,
+  .resize-bar:active ~ .resize-line::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    bottom: 0; right: -8px;
+    /*background: url(./resize.svg);*/
+    background-size: 100% 100%;
+  }
+}

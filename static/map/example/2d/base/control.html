@@ -1,0 +1,120 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+
+  <script type="text/javascript">
+
+      /**
+       * 添加地图缩放控件
+       */
+      window.zoomControl = null;
+      window.panControl = null;
+
+      function addZoomControlTest() {
+          removeZoomControlTest();
+          //'topleft', 'topright', 'bottomleft' or 'bottomright'
+          window.zoomControl = mapVue.$refs.map.addZoomControl("bottomright");
+          console.log(window.zoomControl);
+      }
+
+      /**
+       * 添加地图平移控件
+       */
+      function addPanControlTest() {
+          removePanControlTest();
+          window.panControl = mapVue.$refs.map.addPanControl("bottomright");
+          console.log(window.panControl);
+      }
+
+
+      /**
+       * 删除地图缩放控件
+       */
+      function removeZoomControlTest() {
+          if (window.zoomControl != null) {
+              mapVue.$refs.map.removeZoomControl(window.zoomControl);
+              window.zoomControl = null;
+          }
+      }
+
+      /**
+       * 删除地图平移控件
+       */
+      function removePanControlTest() {
+          if (window.panControl != null) {
+              mapVue.$refs.map.removeZoomControl(window.panControl);
+              window.panControl = null;
+          }
+      }
+      /**
+       * 添加地图比例尺控件
+       */
+      function addScaleControlTest(){
+          window.scaleControl = mapVue.$refs.map.addScaleControl("bottomleft");
+      }
+      /**
+       * 删除地图比例尺控件
+       */
+      function removeScaleControlTest() {
+          if (window.scaleControl != null) {
+              mapVue.$refs.map.removeScaleControl(window.scaleControl);
+              window.scaleControl = null;
+          }
+      }
+
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addZoomControlTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    添加缩放控件
+  </el-button>
+  <el-button type="primary" onclick='removeZoomControlTest();'
+             style='z-index:1000;position:absolute;top:100px;left:50px'>删除缩放控件
+  </el-button>
+
+  <el-button type="primary" onclick='addPanControlTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    添加平移控件
+  </el-button>
+  <el-button type="primary" onclick='removePanControlTest();'
+             style='z-index:1000;position:absolute;top:200px;left:50px'>删除平移控件
+  </el-button>
+
+  <el-button type="primary" onclick='addScaleControlTest();' style='z-index:1000;position:absolute;top:250px;left:50px'>
+    添加比例尺控件
+  </el-button>
+  <el-button type="primary" onclick='removeScaleControlTest();'
+             style='z-index:1000;position:absolute;top:300px;left:50px'>删除比例尺控件
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig,
+        },
+        components: {
+            //'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

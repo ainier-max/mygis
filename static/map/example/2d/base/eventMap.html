@@ -1,0 +1,80 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script> -->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script type="text/javascript">
+      /**
+       * 添加点击事件
+       */
+      function addMapEventTest(){
+          mapVue.$refs.map.onMapEvent("click", clickEventCallBack,"clickname");
+          mapVue.$refs.map.onMapEvent("moveend", moveEventCallBack,"moveend");
+          mapVue.$refs.map.onMapEvent("zoomend", zoomEndEventCallBack,"zoomend");
+          mapVue.$refs.map.onMapEvent("zoomend", zoomEndEventCallBack2,"zoomend2");
+      }
+      /**
+       * 附加的事件
+       */
+      function clickEventCallBack(e) {
+          console.log("地图点击事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+      function moveEventCallBack(e) {
+          console.log("地图移动事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+      function zoomEndEventCallBack(e) {
+          console.log("第一个地图缩放事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+      function zoomEndEventCallBack2(e) {
+          console.log("第二个地图缩放事件回调对象：", e.target);
+          //alert("点击的marker坐标信息:("+e.target.lat+","+e.target.lng+")");
+      }
+
+
+      /**
+       * 移除点击事件
+       */
+      function removeMapEventTest(){
+          mapVue.$refs.map.offMapEvent("click", clickEventCallBack,"clickname");
+          mapVue.$refs.map.offMapEvent("moveend", moveEventCallBack,"moveend");
+          mapVue.$refs.map.offMapEvent("zoomend", zoomEndEventCallBack,"该参数与on不对应就无法删除");
+          mapVue.$refs.map.offMapEvent("zoomend", zoomEndEventCallBack2,"zoomend2");
+      }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addMapEventTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>地图绑定事件</el-button>
+  <el-button type="primary" onclick='removeMapEventTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>移除地图绑定事件</el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            //前端
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

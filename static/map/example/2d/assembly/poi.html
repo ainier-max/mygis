@@ -1,0 +1,67 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--axios依赖-->
+  <script src="../../../map/vue-lib/vuejs/axios.min.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+</head>
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="mapid" :type="type" :config="config"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <api-component ref="api" :id="apiid" :axios="axios"></api-component>
+  <!--POI组件-->
+  <!--
+  autocomplete：显示智能提示下拉框，默认值false
+  poi-suggestion-fetch-count:设置查询条件智能提示下拉框记录数，默认值10
+  region-code:默认区域
+  word:初始关键字
+  total:查询结果最大条数
+  map-ref: 地图引用id，指定地图渲染poi组件
+  map-api-ref：地图api引用id
+  -->
+  <poi-component ref="poi" id="poi" style='z-index:1000;position:absolute;top:50px;left:50px;'
+                 map-ref="map"
+                 map-api-ref="api"
+                 region-code="350200"
+                 word=""
+                 total="50"
+                 :axios="axios"
+  ></poi-component>
+
+  <choose-component ref="choosemapid" id="choosemapid"
+                    :map-ref="mapid" :choose-map-config="myChooseMapConfig"
+                    style="position: absolute;top:20px;right: 20px;z-index: 200"
+  ></choose-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      mapid: "map",
+      apiid: "api",
+      type: "js",
+      config: window.defaultMapConfig,
+      axios: axios,
+      myChooseMapConfig: window.gisConfig.chooseMapConfig
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd'),
+      'api-component': httpVueLoader('../../vue-map-component/tools/api-component.vue', 'frontEnd'),
+      'poi-component': httpVueLoader('../../vue-map-component/tools/poi-component.vue', 'frontEnd'),
+      'choose-component': httpVueLoader('../../vue-map-component/tools/choose-component.vue', 'frontEnd')
+    },
+    methods: {}
+  });
+</script>
+</body>
+</html>

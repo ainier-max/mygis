@@ -1,0 +1,166 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script src="../../../map/vue-lib/js/jquery.min.js"></script>
+  <!--mapv js-->
+  <script src="../../../map/vue-lib/mapv/mapv.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //高度变化，提高展示效果
+      var obj = {lng: 116.3308, lat: 39.8809,eyeHeight:40000,pitch:-70};
+      viewerFlyToLonLat(obj);
+    }
+
+    function addPolylineAnimation(){
+      $.get('../../../../static/data/other/od-xierqi.txt', function (rs) {
+        var data = [];
+        var timeData = [];
+
+        rs = rs.split("\n");
+        console.log(rs.length);
+        var maxLength = 0;
+        for (var i = 0; i < rs.length; i++) {
+          var item = rs[i].split(',');
+          var coordinates = [];
+          if (item.length > maxLength) {
+            maxLength = item.length;
+          }
+          for (j = 0; j < item.length; j += 2) {
+            // var coord = trans.untransform(new maptalks.Point(Number(item[j]), Number(item[j + 1])),1);
+            //coordinates.push([coord.x,coord.y]);
+            var x = Number(item[j]) / 20037508.34 * 180;
+            var y = Number(item[j + 1]) / 20037508.34 * 180;
+            y = 180 / Math.PI * (2 * Math.atan(Math.exp(y * Math.PI / 180)) - Math.PI / 2);
+            if (x == 0 || y == NaN) {
+              continue;
+            }
+            coordinates.push([x, y]);
+            timeData.push({
+              geometry: {
+                type: 'Point',
+                coordinates: [x, y]
+              },
+              count: 1,
+              time: j
+            });
+          }
+          data.push({
+            geometry: {
+              type: 'LineString',
+              coordinates: coordinates
+            }
+          });
+
+        }
+
+        var dataSet = new mapv.DataSet(data);
+
+        var options = {
+          strokeStyle: 'rgba(53,57,255,0.5)',
+          // globalCompositeOperation: 'lighter',
+          shadowColor: 'rgba(53,57,255,0.2)',
+          shadowBlur: 3,
+          lineWidth: 3.0,
+          draw: 'simple'
+        }
+
+        var mapvLayer = mapv.cesiumMapLayer(viewer, dataSet, options);
+
+
+        var dataSet = new mapv.DataSet(timeData);
+
+        var options = {
+          fillStyle: 'rgba(255, 250, 250, 0.2)',
+          globalCompositeOperation: "lighter",
+          size: 1.5,
+          animation: {
+            stepsRange: {
+              start: 0,
+              end: 100
+            },
+            trails: 3,
+            duration: 5,
+          },
+          draw: 'simple'
+        }
+        var mapvLayer = mapv.cesiumMapLayer(viewer, dataSet, options);
+      });
+    }
+
+
+    var entity = null;
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(mapVue.$refs.map.viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          console.log("地形高度：", updatedPositions[0].height);
+          updatedPositions.obj.height = updatedPositions[0].height;
+          if (entity) {
+            viewer.entities.remove(entity);
+          }
+          entity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 1,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0.9),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+              outlineWidth: 1
+            }
+          });
+          viewer.entities.add(entity);
+          var flyPromise = viewer.flyTo(entity, {
+            duration: 8,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(0.0),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+        });
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addPolylineAnimation();' style='z-index:1000;position:absolute;top:50px;left:60px'>线上运动
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.baiduOnlineMidNightMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

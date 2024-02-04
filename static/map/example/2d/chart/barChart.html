@@ -1,0 +1,119 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <!--引入echart-->
+  <script src="../../../map/vue-lib/echart/echarts.js"></script>
+  <script type="text/javascript">
+      window.peoplePhotoLayer = null;
+
+      function addDivTest() {
+          if (window.peoplePhotoLayer != null) {
+              removeDivTest();
+          }
+          var divJson2 = {};
+          //xy坐标
+          divJson2.xy = [24.472422570142833, 118.10471659369913];
+          divJson2.option = {};
+          divJson2.option.iconAnchor = [150, 100];
+          var html = "";
+          html += '<div id="bar_echart" style="height:200px;width:300px"></div>';
+          divJson2.option.html = html;
+          window.peoplePhotoLayer = mapVue.$refs.map.addDiv(divJson2);
+
+          var myChart = echarts.init(document.getElementById('bar_echart'));
+          var option = {
+              tooltip: {
+                  trigger: 'axis',
+                  axisPointer: {
+                      type: 'shadow'
+                  }
+              },
+              grid: {
+                  left: '3%',
+                  right: '4%',
+                  bottom: '3%',
+                  containLabel: true
+              },
+              xAxis: [
+                  {
+                      type: 'category',
+                      data: ['精神病', '前科', '涉稳', '涉毒', '上访'],
+                      axisTick: {
+                          alignWithLabel: true
+                      },
+                      axisLabel: {
+                          show: true,
+                          textStyle: {
+                              color: '#333333',  //更改坐标轴文字颜色
+                              fontSize: 12      //更改坐标轴文字大小
+                          }
+                      },
+                  }
+              ],
+              yAxis: {
+                  show: true,
+                  type: 'value',
+                  splitLine: {
+                      show: false
+                  },
+                  // axisTick: {
+                  //   show: false
+                  // },
+                  // axisLabel: {
+                  //   show: false
+                  // },
+              },
+              series: [
+                  {
+                      name: '人数',
+                      type: 'bar',
+                      barWidth: '60%',
+                      data: [150, 240, 200, 334, 390]
+                  }
+              ]
+          };
+          myChart.setOption(option);
+      }
+
+      function removeDivTest() {
+          console.log(window.peoplePhotoLayer);
+          mapVue.$refs.map.removeLayer(window.peoplePhotoLayer);
+          window.peoplePhotoLayer = null;
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addDivTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>添加柱状图
+  </el-button>
+  <el-button type="primary" onclick='removeDivTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    移除柱状图
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

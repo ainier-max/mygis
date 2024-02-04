@@ -1,0 +1,91 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+
+      window.editPolyline = null;
+
+      function addPolylineTest() {
+          var polylineJSON = {};
+          polylineJSON.xys = [
+              [24.523887634277347, 118.14130783081056],
+              [24.49127197265625, 118.14302444458008],
+              [24.494361877441406, 118.16774368286133],
+              [24.517192840576172, 118.16619873046874]
+          ];
+          //线的样式
+          polylineJSON.option = {};
+          //线的宽度
+          polylineJSON.option.weight = 5;
+          //线的颜色
+          polylineJSON.option.color = "#f18";
+          window.editPolyline = mapVue.$refs.map.addPolyline(polylineJSON);
+      }
+
+      /**
+       * 编辑线
+       */
+      function startEditPolylineTest() {
+          console.log("线进入编辑模式");
+          mapVue.$refs.map.startEditPolyline(window.editPolyline);
+          document.getElementById("zbz").value = window.editPolyline.zbc;
+      }
+
+      /**
+       * 结束编辑线
+       */
+      function endEditPolylineTest() {
+          console.log("线结束编辑模式");
+          var newPolyline = mapVue.$refs.map.endEditPolyline(window.editPolyline);
+          document.getElementById("zbz").value = newPolyline.zbc;
+      }
+  </script>
+</head>
+<body>
+<!--JS版地图接入步骤3：搭建VUE组件元素-->
+<div id="my-app">
+  <!--
+ type：类型[js,vue]
+ config：地图配置信息
+ -->
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addPolylineTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    编辑测试线
+  </el-button>
+  <el-button type="primary" onclick='startEditPolylineTest();'
+             style='z-index:1000;position:absolute;top:100px;left:50px'>进入编辑
+  </el-button>
+  <el-button type="primary" onclick='endEditPolylineTest();' style='z-index:1000;position:absolute;top:150px;left:50px'>
+    结束编辑
+  </el-button>
+
+  <el-input type="textarea" :rows="5"
+            id="zbz" placeholder="线坐标串"
+            style='z-index:1000;position:absolute;top:200px;left:60px;width: 350px'></el-input>
+</div>
+<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

@@ -1,0 +1,129 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+    function polygonGather(){
+      var gatherPoints=[];
+      var points = [];
+      var gatherPolygon = null;
+      var polygonGatherHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      //鼠标变成加号
+      document.getElementById("map").style.cursor = "crosshair";
+      // 对鼠标按下事件的监听
+      polygonGatherHandler.setInputAction((event) => {
+        //获取加载地形后对应的经纬度和高程：地标坐标
+        var ray=viewer.camera.getPickRay(event.position);
+        var cartesian  = viewer.scene.globe.pick(ray, viewer.scene);
+        console.log(cartesian);
+        if(!Cesium.defined(cartesian)) {
+          return;
+        }
+        var point = viewer.entities.add({
+          name: 'gon_point',
+          position: cartesian,
+          point: {
+            color: Cesium.Color.WHITE,
+            pixelSize: 5,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 1
+          }
+        });
+        gatherPoints.push(point);
+        points.push(cartesian);
+        if (points.length >= 3) {
+          if (gatherPolygon == null) {
+            gatherPolygon = viewer.entities.add({
+              name: 'polygon',
+              polygon: {
+                hierarchy: new Cesium.CallbackProperty(function (time,result){
+                  var hierarchyTemp=new Cesium.PolygonHierarchy ( points , null )
+                  return hierarchyTemp;
+                }, false),
+                material: Cesium.Color.GREENYELLOW.withAlpha(0.5)
+              }
+            });
+          }else {
+            gatherPolygon.polygon.hierarchy = new Cesium.CallbackProperty(function (time,result){
+              var hierarchyTemp=new Cesium.PolygonHierarchy ( points , null )
+              return hierarchyTemp;
+            }, false);
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      polygonGatherHandler.setInputAction(function (rightClick) {
+        console.log("采集的面坐标(笛卡尔)：",gatherPolygon.polygon.hierarchy.getValue().positions);
+        var dke=gatherPolygon.polygon.hierarchy.getValue().positions;
+        var objArr=[];
+        for(var i=0;i<dke.length;i++){
+          var ellipsoid=viewer.scene.globe.ellipsoid;
+          var cartesian3=new Cesium.Cartesian3(dke[i].x,dke[i].y,dke[i].z);
+          var cartographic=ellipsoid.cartesianToCartographic(cartesian3);
+          //console.log("cartographic",cartographic);
+          var obj={};
+          obj.lat=Cesium.Math.toDegrees(cartographic.latitude);
+          obj.lng=Cesium.Math.toDegrees(cartographic.longitude);
+          obj.alt=cartographic.height;
+          objArr.push(obj);
+        }
+        console.log("采集的面坐标(经纬度)",objArr);
+        for(var i=0;i<gatherPoints.length;i++){
+          viewer.entities.remove(gatherPoints[i]);
+        }
+        gatherPoints=[];
+        //points = [];//注：points不可置空，如果置空，会导致地图上的点也不存在。
+        //鼠标变成加号
+        document.getElementById("map").style.cursor = "default";
+        //移除地图点击事件
+        polygonGatherHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK)//移除事件
+      }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='polygonGather();' style='z-index:1000;position:absolute;top:50px;left:60px'>面采集
+  </el-button>
+
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

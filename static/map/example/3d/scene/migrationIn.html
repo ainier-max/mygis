@@ -1,0 +1,232 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+
+  <!--自定义material-->
+  <script src="../../../map/vue-lib/mapjs/cesium/material/polylineLineFlowMaterial.js"></script>
+  <style>
+
+    .mapClass {
+      background-image: url(../images/back.png);
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+  </style>
+
+  <script>
+    var from = {
+      name: '湖里区',
+      x: 118.10943,
+      y: 24.512764,
+    };
+
+    var to = [
+      {
+        name: '集美区',
+        x: 118.040869,
+        y: 24.602874,
+      },
+      {
+        name: '同安区',
+        x: 118.150455,
+        y: 24.729333,
+      },
+      {
+        name: '海沧区',
+        x: 118.036364,
+        y: 24.492512,
+      },
+      {
+        name: '思明区',
+        x: 118.087828,
+        y: 24.462059,
+      },
+      {
+        name: '翔安区',
+        x: 118.242811,
+        y: 24.637479,
+      },
+
+    ];
+
+
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //关闭抗锯齿
+      viewer.scene.fxaa=false
+      viewer.scene.postProcessStages.fxaa.enabled = false;
+
+      //关掉太空
+      viewer.scene.skyBox.show = false;
+      //关掉大气层
+      viewer.scene.skyAtmosphere.show = false;
+      //默认不加载地图
+      viewer.imageryLayers.get(0).show=false;
+      //地形透明设置
+      var extendGlobe = new Cesium.ExtendGlobe(viewer);
+      extendGlobe.terrainTransparent = true; // or false
+      //定位
+      var obj = {lng:118.11471659369913, lat: 24.622422570142833,eyeHeight:50000,pitch:-35,heading:0.0,time:0.1};
+      mapVue.$refs.map.viewerFlyToLonLat(obj);
+      addGeojson();
+    }
+
+    function addGeojson(){
+      // 纯色背景,Cesium.Color.TRANSPARENT透明
+      viewer.scene.globe.baseColor = Cesium.Color.TRANSPARENT;
+      //viewer.scene.globe.baseColor = Cesium.Color.BLUE;
+      //viewer.scene.backgroundColor = new Cesium.Color(255, 0.0, 0.0, 0.0);
+      viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
+
+      //Cesium.Math.setRandomNumberSeed(0);  //设置随机数种子
+      var promise = Cesium.GeoJsonDataSource.load('../../../../static/data/xiamen.json'); //geojson面数据
+      promise.then(function(dataSource) {
+        viewer.dataSources.add(dataSource);
+        var entities = dataSource.entities.values;
+
+        for (var i = 0; i < entities.length; i++) {
+          var entity = entities[i];
+          var colorStr=getColor();
+          var	cesiumColor = Cesium.Color.fromCssColorString(colorStr);
+          entity.polygon.material = cesiumColor;
+          entity.polygon.outline = false;
+          entity.polygon.extrudedHeight = 3000;
+        }
+      });
+
+
+
+      addMigrationOut();
+    }
+
+    function addMigrationOut(){
+      const e = Cesium.Cartesian3.fromDegrees(from.x, from.y, 3300);
+      // 绘制起点
+      viewer.entities.add({
+        name: from.name,
+        position: e,
+        point: {
+          pixelSize: 10,
+          color: new Cesium.Color(0.3, 0.79, 1, 0.9),
+        },
+      });
+      for (let index = 0; index < to.length; index++) {
+        const o = to[index];
+        const t = Cesium.Cartesian3.fromDegrees(o.x, o.y, 3300);
+        // 绘制(流动)曲线
+        viewer.entities.add({
+          name: o.name,
+          polyline: {
+            positions: getLinkedPointList(t, e, 4e4, 100),
+            width: 5,
+            material: new LineFlowMaterialProperty(new Cesium.Color(1, 0.79, 0.15, 1), 2e3),
+          },
+        });
+
+        // 绘制终点
+        viewer.entities.add({
+          name: o.name,
+          position: t,
+          point: {
+            pixelSize: 8,
+            color: new Cesium.Color(1, 201 / 255, 38 / 255, 1),
+          },
+        });
+
+      }
+
+    }
+
+    function getColor(){
+      var colourstr="#"
+      var coloruarr=["a","b","c","d","e","f","0","1","2","3","4","5","6","7","8","9"]
+      for(var p=0;p<6;p++){
+        var n=Math.floor(Math.random()*coloruarr.length+1)-1;
+        colourstr+=coloruarr[n];
+      }
+      return colourstr;
+    }
+
+    function getLinkedPointList(e, t, i, r) {
+      const n = [];
+      const o = Cesium.Cartographic.fromCartesian(e);
+      const a = Cesium.Cartographic.fromCartesian(t);
+      const s = (180 * o.longitude) / Math.PI;
+      const l = (180 * o.latitude) / Math.PI;
+      const u = (180 * a.longitude) / Math.PI;
+      const c = (180 * a.latitude) / Math.PI;
+      const h = Math.sqrt((s - u) * (s - u) + (l - c) * (l - c));
+      const d = h * i;
+      const f = Cesium.Cartesian3.clone(e);
+      const p = Cesium.Cartesian3.clone(t);
+      const m = Cesium.Cartesian3.distance(f, Cesium.Cartesian3.ZERO);
+      const g = Cesium.Cartesian3.distance(p, Cesium.Cartesian3.ZERO);
+      Cesium.Cartesian3.normalize(f, f);
+      Cesium.Cartesian3.normalize(p, p);
+      if (Cesium.Cartesian3.distance(f, p) === 0) return n;
+      const v = Cesium.Cartesian3.angleBetween(f, p);
+      n.push(e);
+      for (let y = 1; y < r - 1; y++) {
+        const _ = (1 * y) / (r - 1);
+        const w = 1 - _;
+        const b = Math.sin(w * v) / Math.sin(v);
+        const C = Math.sin(_ * v) / Math.sin(v);
+        const x = Cesium.Cartesian3.multiplyByScalar(f, b, new Cesium.Cartesian3());
+        const P = Cesium.Cartesian3.multiplyByScalar(p, C, new Cesium.Cartesian3());
+        const E = Cesium.Cartesian3.add(x, P, new Cesium.Cartesian3());
+        const M = _ * Math.PI;
+        const T = m * w + g * _ + Math.sin(M) * d;
+        const F = Cesium.Cartesian3.multiplyByScalar(E, T, E);
+        n.push(F);
+      }
+      n.push(t);
+      return n;
+    }
+
+
+
+
+
+
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+
+  <map-component ref="map"  class="mapClass" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.noMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

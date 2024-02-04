@@ -1,0 +1,41 @@
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <!--vue依赖-->
+  <script src="../../../vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../vue-lib/elementjs/index.css">
+  <script src="../../../codemirror/codemirror.js"></script>
+</head>
+
+<body style="background-color: rgb(249 249 249);" >
+
+<div id="guide-app">
+  <el-tabs v-model="activeName" @tab-click="handleClick">
+    <el-tab-pane label="JS版地图接入" name="first">
+      <iframe src="guidejs.html" style="height: 100%;width: 100%;" frameborder="no" border="0" marginwidth="0" marginheight="0" scrolling="no" allowtransparency="yes"></iframe>
+    </el-tab-pane>
+    <el-tab-pane label="VUE版地图接入" name="second">
+      <iframe src="guidevue.html" style="height: 100%;width: 100%;" frameborder="no" border="0" marginwidth="0" marginheight="0" scrolling="auto" allowtransparency="yes"></iframe>
+    </el-tab-pane>
+  </el-tabs>
+</div>
+<script>
+  var guideVue = new Vue({
+    el: '#guide-app',
+    data() {
+      return {
+        activeName: 'first'
+      };
+    },
+    methods: {
+      handleClick(tab, event) {
+
+      }
+    }
+  });
+</script>
+</body>
+</html>
+

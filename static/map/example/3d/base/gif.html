@@ -1,0 +1,86 @@
+<!--不推荐使用该方式，建议直接使用HTML方式-->
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script type="text/javascript" src="../../../map/vue-lib/mapjs/cesium/libs/libgif/libgif.js"></script>
+  <script type="text/javascript" src="../../../map/vue-lib/mapjs/cesium/libs/libgif/rubbable.js"></script>
+  <script>
+    var rubGif = null;
+    var viewer=null;
+    function loadEnd() {
+      loadGIF();
+      viewer=mapVue.$refs.map.viewer;
+    }
+
+    function loadGIF() {
+      var div = document.createElement("div");
+      var img = document.createElement("img");
+      div.appendChild(img);
+      img.src = "../../../map/example/images/gif.gif";
+      img.onload = () => {
+        console.log("gif加载中");
+        var time1=new Date();
+        console.log(time1.getTime());
+        rubGif = new SuperGif({
+          gif: img
+        });
+        console.log("gif加载中");
+        rubGif.load(() => {
+          var time2=new Date();
+          console.log("time：",time2-time1);
+        });
+      }
+    }
+    function addMarker() {
+      var entity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(118.10448138165137, 24.451483144361173),
+        billboard: {
+          image: new Cesium.CallbackProperty(() => {
+            //console.log("canvas数据：",rubGif.get_canvas().toDataURL("image/png"));
+            return rubGif.get_canvas().toDataURL("image/png");
+          }, false),
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          scaleByDistance: new Cesium.NearFarScalar(500, 0.1, 2000, 0.1)
+        }
+      });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addMarker();' style='z-index:1000;position:absolute;top:50px;left:60px'>上GIF
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

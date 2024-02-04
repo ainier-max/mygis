@@ -1,0 +1,328 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer=null;
+    function loadEnd(){
+      console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.viewer);
+      viewer=mapVue.$refs.map.viewer;
+    }
+
+    var gatherPosition=[];//采集的点信息
+    var drawHandler=null;//画事件
+    var floatingPoint=null;//移动点
+    var gatheringPlace=null;//集结地
+    var layerId="RendezvousLayer";
+    var tt=0.4;
+
+    function addRendezvous(){
+      console.log("集结地");
+      gatherPosition=[];
+      drawHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      drawHandler.setInputAction(function (event) {
+        //屏幕坐标转世界坐标
+        var position = event.position;
+        if (!Cesium.defined(position)) {
+          return;
+        }
+        var ray = viewer.camera.getPickRay(position);
+        if (!Cesium.defined(ray)) {
+          return;
+        }
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        console.log("点击地图采集的点：",cartesian);
+
+        if (gatherPosition.length == 0) {
+          gatherPosition.push(cartesian.clone());
+          floatingPoint = createPoint(cartesian);
+        }
+
+        if (gatherPosition.length <= 2) {
+          createPoint(cartesian); // 绘制点
+          gatherPosition.push(cartesian);
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+
+      drawHandler.setInputAction(function (event) { //移动时绘制面
+        //console.log("gatherPosition",gatherPosition);
+        if (gatherPosition.length < 2) {
+          return;
+        }
+
+        //屏幕坐标转世界坐标
+        var position = event.endPosition;
+        if (!Cesium.defined(position)) {
+          return;
+        }
+        var ray = viewer.camera.getPickRay(position);
+        if (!Cesium.defined(ray)) {
+          return;
+        }
+        var cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!Cesium.defined(cartesian)) {
+          return;
+        }
+        //console.log("点击地图移动采集的点：",cartesian);
+        if (!Cesium.defined(gatheringPlace)) {
+          gatheringPlace = createGatheringPlace();
+        }
+        floatingPoint.position.setValue(cartesian);
+        if (gatheringPlace) {
+          //替换最后一个点
+          // gatherPosition.pop();
+          // gatherPosition.push(cartesian);
+
+          //替换中间点
+          if(gatherPosition.length==3){
+            gatherPosition[1]=cartesian;
+          }else{
+            gatherPosition.pop();
+            gatherPosition.push(cartesian);
+          }
+
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+
+      //右击停止采集
+      drawHandler.setInputAction(function (movement) {
+
+        if(gatherPosition.length >= 3){
+          viewer.entities.remove(floatingPoint);
+          floatingPoint=null;
+          //去掉事件
+          if(drawHandler){
+            drawHandler.destroy();
+            drawHandler=null;
+          }
+          //删除关键点
+          clearKeyPoint();
+        }
+      }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+
+
+
+
+
+
+    }
+    /**
+     * 删除关键点
+     */
+    function clearKeyPoint(){
+      var entityList = viewer.entities.values;
+      if (entityList == null || entityList.length < 1){
+        return;
+      }
+      for (var i = 0; i < entityList.length; i++) {
+        var entity = entityList[i];
+        if(entity.flag=="keypoint"){
+          viewer.entities.remove(entity);
+          i--;
+        }
+      }
+    }
+
+    //创建关键点
+    function createPoint(cartesian) {
+      var point = viewer.entities.add({
+        position: cartesian,
+        billboard: {
+          image: "../images/gatherPoint.png",
+          eyeOffset: new Cesium.ConstantProperty(new Cesium.Cartesian3(0, 0, -500)),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+      });
+      point.layerId = layerId;
+      point.flag = "keypoint";
+      return point;
+    };
+    //创建集结地
+    function createGatheringPlace() {
+      var gatheringPlaceEntity = viewer.entities.add({
+          polygon: {
+            hierarchy: new Cesium.CallbackProperty(function () {
+
+              //console.log("gatherPosition",gatherPosition);
+              if(gatherPosition.length<3){
+                return;
+              }
+              // return new $this.Cesium.PolygonHierarchy($this._positions);
+              var length = gatherPosition.length;
+              var p1 = gatherPosition[0];
+              var p2 = gatherPosition[length - 1];
+              //console.log("p1,p2",p1,p2);
+              var gatheringPlace = [];
+              var res = fineGatheringPlace();
+              //console.log("res:",res);
+              for (var i = 0; i < res.length; i++) {
+                var cart3 = new Cesium.Cartesian3(res[i].x, res[i].y, res[i].z);
+                gatheringPlace.push(cart3);
+              }
+              var pHierarchy=new Cesium.PolygonHierarchy(gatheringPlace);
+              var lonLats = getLonLatArr(gatherPosition);
+              pHierarchy.keyPoints=lonLats;
+              return pHierarchy
+            }, false),
+            show: true,
+            fill: true,
+            clampToGround: true,
+            material: Cesium.Color.fromCssColorString('#ff0').withAlpha(0.5)
+          }
+        }
+      )
+      //$this._entities_gatheringPlace.push(gatheringPlaceEntity);
+      gatheringPlaceEntity.valueFlag="value";
+      return gatheringPlaceEntity
+    }
+    //笛卡尔转经纬度
+    function getLonLatArr(positions) {
+      var arr = [];
+      for (var i = 0; i < positions.length; i++) {
+        var p = getLonLat(positions[i]);
+        if (p != null) {
+          arr.push([p.lon, p.lat]);
+        }
+      }
+      return arr;
+    }
+    /**
+     * 笛卡尔坐标转经纬度坐标
+     */
+    function getLonLat(cartesian) {
+      var cartographic =  viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+      cartographic.height = viewer.scene.globe.getHeight(cartographic);
+      var pos = {
+        lon: cartographic.longitude,
+        lat: cartographic.latitude,
+        alt: cartographic.height
+      };
+      pos.lon = Cesium.Math.toDegrees(pos.lon);
+      pos.lat = Cesium.Math.toDegrees(pos.lat);
+      return pos;
+    }
+
+    //求集结地插值坐标
+    function fineGatheringPlace() {
+      let points = gatherPosition.length;
+      if (points < 2) {
+        return false
+      } else {
+        let pnts = new Array();
+        gatherPosition.forEach(function (item) {
+          var posLonLat=getLonLat(item);;
+          pnts.push([posLonLat.lon, posLonLat.lat]);
+        });
+        //console.log("pnts6666",pnts);
+        // pnts.push(tailPoint);
+        // pnts.push(headerPoint);
+
+        if (pnts.length === 2) {
+          let mid = P.PlotUtils.mid(pnts[0], pnts[1])
+          //let d = utils.MathDistance(pnts[0], mid) / 0.9
+          let d = P.PlotUtils.distance(pnts[0], mid) / 0.9
+          //console.log("d",d);
+          let pnt = P.PlotUtils.getThirdPoint(pnts[0], mid, P.Constants.HALF_PI, d, true)
+          pnts = [pnts[0], pnt, pnts[1]];
+          //console.log("pnt",pnt);
+          //createPoint(Cesium.Cartesian3.fromDegrees(pnt[0], pnt[1]));
+        }
+        let mid = P.PlotUtils.mid(pnts[0], pnts[2])
+        pnts.push(mid, pnts[0], pnts[1])
+        //console.log("3333");
+
+        let [normals, pnt1, pnt2, pnt3, pList] = [[], undefined, undefined, undefined, []]
+        for (let i = 0; i < pnts.length - 2; i++) {
+          pnt1 = pnts[i]
+          pnt2 = pnts[i + 1]
+          pnt3 = pnts[i + 2]
+          let normalPoints = P.PlotUtils.getBisectorNormals(tt, pnt1, pnt2, pnt3)
+          normals = normals.concat(normalPoints)
+        }
+        let count = normals.length
+        normals = [normals[count - 1]].concat(normals.slice(0, count - 1))
+        for (let i = 0; i < pnts.length - 2; i++) {
+          pnt1 = pnts[i]
+          pnt2 = pnts[i + 1]
+          pList = pList.concat(pnt1)
+          for (let t = 0; t <= P.Constants.FITTING_COUNT; t++) {
+            let pnt = P.PlotUtils.getCubicValue(t / P.Constants.FITTING_COUNT, pnt1, normals[i * 2], normals[i * 2 + 1], pnt2)
+            pList = pList.concat(pnt)
+          }
+          pList = pList.concat(pnt2)
+        }
+        return Cesium.Cartesian3.fromDegreesArray(pList);
+      }
+    }
+
+    function getRendezvousValue(){
+      var entityList = viewer.entities.values;
+      for (var i = 0; i < entityList.length; i++) {
+        var entity = entityList[i];
+        if(typeof (entity.valueFlag)!="undefined"){
+          //console.log("采集的集结地(笛卡尔)：",entity.polygon.hierarchy.getValue().positions);
+          var dke=entity.polygon.hierarchy.getValue().positions;
+          var objArr=[];
+          for(var i=0;i<dke.length;i++){
+            var ellipsoid=viewer.scene.globe.ellipsoid;
+            var cartesian3=new Cesium.Cartesian3(dke[i].x,dke[i].y,dke[i].z);
+            var cartographic=ellipsoid.cartesianToCartographic(cartesian3);
+            //console.log("cartographic",cartographic);
+            var obj={};
+            obj.lat=Cesium.Math.toDegrees(cartographic.latitude);
+            obj.lng=Cesium.Math.toDegrees(cartographic.longitude);
+            //obj.alt=0;
+            objArr.push(obj);
+          }
+          console.log("采集的集结地(经纬度)",objArr);
+          console.log("采集的集结地关键点",entity.polygon.hierarchy.getValue().keyPoints);
+        }
+
+      }
+    }
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addRendezvous();' style='z-index:1000;position:absolute;top:50px;left:60px'>集结地采集(右击结束采集)
+  </el-button>
+  <el-button type="primary" onclick='getRendezvousValue();' style='z-index:1000;position:absolute;top:100px;left:50px'>获取采集数据
+  </el-button>
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"  style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun:"loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted(){
+
+    }
+  });
+</script>
+</body>
+</html>

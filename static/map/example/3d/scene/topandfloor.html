@@ -1,0 +1,120 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+
+
+  <script>
+    var viewer = null;
+    var builderHeight=8;
+    var indexFlag=0;
+    var showFlag=true;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+
+      //阴影
+      viewer.scene.globe.enableLighting = false;
+      viewer.shadows = false
+      //定位
+      var obj = {lng: 118.0850887298584, lat: 24.439001083374023,eyeHeight:100,pitch:-30,heading:0.0,time:1};
+      mapVue.$refs.map.viewerFlyToLonLat(obj);
+    }
+
+
+    function addTop() {
+      createModel("../../../../static/data/3dmodel/build/top.glb",false);
+    }
+
+
+    function addFloor() {
+      createModel("../../../../static/data/3dmodel/build/floor.glb",true);
+    }
+
+
+    function createModel(url,paramFlag) {
+      if(showFlag==false){
+        alert("已添加顶层,不可再添加！");
+        return;
+      }
+      showFlag=paramFlag;
+      builderHeight=builderHeight+3;
+      //viewer.entities.removeAll();
+      var position = Cesium.Cartesian3.fromDegrees(
+        118.0850887298584,
+        24.439001083374023,
+        builderHeight
+      );
+      var heading = Cesium.Math.toRadians(135);
+      var pitch = 0;
+      var roll = 0;
+      var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+      var orientation = Cesium.Transforms.headingPitchRollQuaternion(
+        position,
+        hpr
+      );
+      indexFlag=indexFlag+1;
+      viewer.entities.add({
+        id:"3dmodel"+indexFlag,
+        name: url,
+        position: position,
+        orientation: orientation,//设置模型方向
+        model: {
+          uri: url,
+          minimumPixelSize: 128,
+          maximumScale: 20000,
+        },
+      });
+    }
+
+
+
+
+
+
+
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+
+  <map-component ref="map"  class="mapClass" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+
+  <input type="button" onclick='addFloor();' value="添加楼层"
+         style='position:absolute;left:50px;top:50px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+  <input type="button" onclick='addTop();' value="添加顶层"
+         style='position:absolute;left:50px;top:100px;background: blue;color:white;z-index: 9999;font-size: 24px'/>
+
+
+  </div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

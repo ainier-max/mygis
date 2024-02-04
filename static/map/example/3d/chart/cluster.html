@@ -1,0 +1,94 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function addCluster(){
+      console.log("聚合图：");
+      var dataSource = new Cesium.CustomDataSource('myData');
+      for(var i=0;i<500;i++){
+        var xTemp=118.03 + Math.random() * 0.10;
+        var yTemp=24.39 + Math.random() * 0.10;
+        dataSource.entities.add({
+          position : Cesium.Cartesian3.fromDegrees(xTemp, yTemp, 0),
+          billboard : {
+            image : '../images/add.png',
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            //必须加上宽高，否则第一次将不会进行聚合
+            width:42,
+            height:42
+          }
+        });
+      }
+      var dataSourcePromise=viewer.dataSources.add(dataSource);
+      dataSourcePromise.then(function (dataSource) {
+        //console.log("dataSource",dataSource);
+        dataSource.clustering.enabled = true;
+        dataSource.clustering.pixelRange = 80;//pixelRange是聚合距离，也就是小于这个距离就会被聚合，以像素为单位。
+        dataSource.clustering.minimumClusterSize = 2;//是每个聚合点的最小聚合个数，这个值最好是设置为2，因为两个图标也可能叠压。
+        dataSource.clustering.clusterBillboards=true;
+        var pinBuilder = new Cesium.PinBuilder();
+        var removeListener = dataSource.clustering.clusterEvent.addEventListener(
+          function (clusteredEntities, cluster) {
+            console.log("clusteredEntities, cluster：",clusteredEntities, cluster);
+            cluster.label.show = false;
+            cluster.billboard.show = true;
+            cluster.billboard.id = cluster.label.id;
+            cluster.billboard.verticalOrigin =Cesium.VerticalOrigin.BOTTOM;
+            if(clusteredEntities.length>30){
+              cluster.billboard.image=pinBuilder.fromText(clusteredEntities.length, Cesium.Color.RED, 48).toDataURL();
+            }else if(clusteredEntities.length>10){
+              cluster.billboard.image=pinBuilder.fromText(clusteredEntities.length, Cesium.Color.YELLOW, 48).toDataURL();
+            }else{
+              cluster.billboard.image=pinBuilder.fromText(clusteredEntities.length, Cesium.Color.BLUE, 48).toDataURL();
+            }
+          }
+        )
+
+      });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addCluster();' style='z-index:1000;position:absolute;top:50px;left:60px'>添加聚合图
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

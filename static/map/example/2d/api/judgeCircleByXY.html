@@ -1,0 +1,104 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--axios依赖-->
+  <script src="../../../map/vue-lib/vuejs/axios.min.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+      window.testMarker = null;
+
+      function drawMarkerTest() {
+          if (window.testMarker != null) {
+              mapVue.$refs.map.removeLayer(window.testMarker);
+             window.testMarker = null;
+          }
+          //采集点图标
+          var markerJSON = {};
+          //绝对路径
+          markerJSON.iconUrl = "../images/green.png";
+          //图片偏移（坐标固定在图标的哪个点，[0,0]表示图标的左上角）
+          markerJSON.iconAnchor = [16, 16];
+          //图片大小
+          markerJSON.width = 32;
+          markerJSON.height = 32;
+          var dragFlag = false;//是否可移动,仅适用于leaflet开发技术，minemap不生效
+          mapVue.$refs.map.drawMarker(markerJSON, dragFlag, markerReceiver);
+      }
+
+      function markerReceiver(markerObj) {
+          window.testMarker = markerObj;
+          console.log("上图的对象", markerObj);
+          console.log("采集坐标：", markerObj.xy);
+          var lat = markerObj.xy.lat;
+          var lng = markerObj.xy.lng;
+          var judgeFlag = mapVue.$refs.api.judgeCircleByXY(lat, lng, window.circle);
+          document.getElementById("relation").value = "点与圆关系:" + judgeFlag;
+      }
+
+      //以下代码仅供验证，显示出圆，方便验证。
+      function addCircleTest() {
+          var circleJson = {};
+          //圆心
+          circleJson.xy = [24.522422570142833, 118.11471659369913];
+          circleJson.option = {};
+          //圆半径
+          circleJson.option.radius = 2000;//单位米
+          //边界线颜色
+          circleJson.option.color = "#ff0000";
+          //填充颜色
+          circleJson.option.fillColor = "#f18";
+          //透明度
+          circleJson.option.fillOpacity = 0.5;
+          window.circle = mapVue.$refs.map.addCircle(circleJson);
+          console.log("circle", window.circle);
+      }
+
+  </script>
+</head>
+<body>
+<!--JS版地图接入步骤3：搭建VUE组件元素-->
+<div id="my-app">
+  <!--
+ type：类型[js,vue]
+ config：地图配置信息
+ -->
+  <map-component ref="map" :id="mapid" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <!--map-ref:绑定到地图组件-->
+  <api-component ref="api" :id="apiid" :axios="axios" map-ref="map"></api-component>
+  <el-button type="primary" onclick='addCircleTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>先画出圆
+  </el-button>
+  <el-button type="primary" onclick='drawMarkerTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    然后放置点
+  </el-button>
+  <el-input type="textarea" :rows="1"
+            id="relation" placeholder="判断点与圆的关系"
+            style='z-index:1000;position:absolute;top:150px;left:60px;width: 200px'></el-input>
+</div>
+<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            mapid: "map",
+            apiid: "api",
+            type: "js",
+            config: window.defaultMapConfig,
+            axios: axios,
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd'),
+             'api-component': httpVueLoader('../../vue-map-component/tools/api-component.vue', 'frontEnd'),
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

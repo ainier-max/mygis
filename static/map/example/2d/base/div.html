@@ -1,0 +1,74 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--elementui依赖-->
+  <script src="../../../map/vue-lib/elementjs/index.js"></script>
+  <link rel="stylesheet" href="../../../map/vue-lib/elementjs/index.css">
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <style>
+    .peoplePhoto-box {
+      width: 0;
+      height: 0;
+      margin-left: 13px;
+      margin-top: -7px;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 10px solid red;
+    }
+  </style>
+  <script type="text/javascript">
+      window.peoplePhotoLayer = null;
+
+      function addDivTest() {
+          var divJson2 = {};
+          //xy坐标
+          divJson2.xy = [24.492422570142833, 118.10471659369913];
+          divJson2.option = {};
+          divJson2.option.iconAnchor = [23, 54];
+          //divJson2.option.html=this.$refs.peoplePhoto;
+          var html = "";
+          html += '<div>'
+          html += '<img src="../images/people.png" width="40px;" height="40px" style="border-radius:40px;border-style:solid;border-color:red">'
+          html += '<div class="peoplePhoto-box"></div>'
+          html += '</div>'
+          divJson2.option.html = html;
+          window.peoplePhotoLayer = mapVue.$refs.map.addDiv(divJson2);
+      }
+
+      function removeDivTest() {
+          console.log(window.peoplePhotoLayer);
+          mapVue.$refs.map.removeLayer(window.peoplePhotoLayer);
+      }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+  <el-button type="primary" onclick='addDivTest();' style='z-index:1000;position:absolute;top:50px;left:60px'>添加div
+  </el-button>
+  <el-button type="primary" onclick='removeDivTest();' style='z-index:1000;position:absolute;top:100px;left:50px'>
+    移除div
+  </el-button>
+</div>
+<script>
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.defaultMapConfig
+        },
+        components: {
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+<!--编辑代码end-->

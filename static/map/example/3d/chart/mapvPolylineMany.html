@@ -1,0 +1,121 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script src="../../../map/vue-lib/js/jquery.min.js"></script>
+  <!--mapv js-->
+  <script src="../../../map/vue-lib/mapv/mapv.js"></script>
+  <script>
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      //高度变化，提高展示效果
+      var obj = {lng: 109.3618, lat: 31.9721,eyeHeight:4000000,pitch:-70};
+      viewerFlyToLonLat(obj);
+    }
+
+    function addPolylineMany(){
+      var randomCount = 1000;
+      var data = [];
+
+      var citys = ["北京", "天津", "上海", "重庆", "石家庄", "太原", "呼和浩特", "哈尔滨", "长春", "沈阳", "济南", "南京", "合肥", "杭州", "南昌", "福州", "郑州", "武汉", "长沙", "广州", "南宁", "西安", "银川", "兰州", "西宁", "乌鲁木齐", "成都", "贵阳", "昆明", "拉萨", "海口"];
+
+      // 构造数据
+      while (randomCount--) {
+        var cityCenter1 = mapv.utilCityCenter.getCenterByCityName(citys[parseInt(Math.random() * citys.length)]);
+        var cityCenter2 = mapv.utilCityCenter.getCenterByCityName(citys[parseInt(Math.random() * citys.length)]);
+        data.push({
+          geometry: {
+            type: 'LineString',
+            coordinates: [[cityCenter1.lng - 1 + Math.random() * 1, cityCenter1.lat - 1 + Math.random() * 1], [cityCenter2.lng - 1 + Math.random() * 1, cityCenter2.lat - 1 + Math.random() * 1]]
+          },
+          count: 30 * Math.random()
+        });
+      }
+
+      var dataSet = new mapv.DataSet(data);
+
+      var options = {
+        strokeStyle: 'rgba(255, 250, 50, 0.3)',
+        shadowColor: 'rgba(255, 250, 50, 1)',
+        shadowBlur: 20,
+        lineWidth: 0.7,
+        draw: 'simple'
+      }
+      var mapvLayer = mapv.cesiumMapLayer(viewer, dataSet, options);
+    }
+
+
+    var entity = null;
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(mapVue.$refs.map.viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          console.log("地形高度：", updatedPositions[0].height);
+          updatedPositions.obj.height = updatedPositions[0].height;
+          if (entity) {
+            viewer.entities.remove(entity);
+          }
+          entity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 1,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0.9),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+              outlineWidth: 1
+            }
+          });
+          viewer.entities.add(entity);
+          var flyPromise = viewer.flyTo(entity, {
+            duration: 0.5,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(0.0),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+        });
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addPolylineMany();' style='z-index:1000;position:absolute;top:50px;left:60px'>连接线
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.baiduOnlineMidNightMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

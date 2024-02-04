@@ -1,0 +1,56 @@
+<template>
+  <div>
+    <map-component ref="map" :id="id" :type="type" :config="config" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+    <el-button type="primary" @click='addPolygonTest();' style='z-index:1000;position:absolute;top:50px;left:50px'>
+      添加挖空多边形
+    </el-button>
+  </div>
+</template>
+<script>
+    export default {
+        name: "demo",
+        props: {},
+        data() {
+            return {
+                id: "map",
+                type: "vue",
+                config: window.defaultMapConfig
+            }
+        },
+        components: {
+            'map-component': httpVueLoader('../../static/map/vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        },
+        methods: {
+            addPolygonTest() {
+                var polygonJSON = {};
+                polygonJSON.xys = [
+                    // outer ring
+                    [[90, -180],[90, 180],[-90, 180],[-90, -180]],
+                    // hole
+                    [
+                        [24.55547332763672,118.08380126953125],[24.501571655273438,118.06800842285156],[24.467926025390625,118.06251525878906],[24.437026977539062,118.04500579833984],[24.420204162597656,118.1304931640625],[24.46758270263672,118.18954467773438],[24.49230194091797,118.20430755615233],[24.52182769775391,118.20087432861328],[24.53899383544922,118.19297790527344],[24.559249877929688,118.16276550292969],[24.56817626953125,118.13255310058594]
+                    ]
+                ];
+                //面的样式
+                polygonJSON.option = {};
+                //边界线大小(四维图形接口宽度不生效)
+                polygonJSON.option.weight = 5;
+                //边界线颜色
+                polygonJSON.option.color = "#ffffff";
+                //填充颜色
+                polygonJSON.option.fillColor = "#ffffff";
+                //透明度
+                polygonJSON.option.fillOpacity = 0.8;
+                var polygon = this.$refs.map.addPolygon(polygonJSON);
+                console.log("polygon", polygon);
+            }
+        },
+        mounted: function () {
+
+        },
+    }
+</script>
+
+<style>
+
+</style>

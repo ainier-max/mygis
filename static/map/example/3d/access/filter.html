@@ -1,0 +1,62 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    function loadBefore(){
+      console.log("地图加载之前的调用");
+      //在线调用cesium的服务需要token
+      Cesium.Ion.defaultAccessToken='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmMTYxYjE3Zi0yM2ZjLTQzOTUtOTUyZS0wNGRlYTI0NzZkNWEiLCJpZCI6MjU5LCJpYXQiOjE2MjI1Nzc1NzF9.wBdlWsqCoHM9tpplqxAPCdQWsERtxJc65IFZRf4g0z4';
+      //滤镜invert
+      Cesium.Ion.mapFilter={};
+      Cesium.Ion.mapFilter.flag=true;
+      Cesium.Ion.mapFilter.value=1.0;//1.0以上
+    }
+
+    var viewer=null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+      let layer0 = viewer.scene.imageryLayers.get(0);//获取到切片图层
+      layer0.gamma = 1.0;//灰度
+      layer0.hue=0.1;//色调
+      layer0.saturation=1.0;//饱和度
+      //Cesium API文档可查找ImageryLayer相关配置与相关方法
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-before="loadBeforeFun" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.osmOnlineMapConfig,
+      //地图加载之前的回调方法
+      loadBeforeFun: "loadBefore",
+      //地图加载完成的回调方法
+      loadEndFun: "loadEnd",
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

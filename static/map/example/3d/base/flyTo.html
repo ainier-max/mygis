@@ -1,0 +1,113 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    /**
+     在cesium中viewer.flyTo和Camera.flyTo的区别挺大，
+     如果用camera来定位，但当需要加上一个倾斜角的时候，可能定位的结果就和预想的区别很大
+     推荐使用flyTo
+     * @type {null}
+     */
+    var viewer = null;
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function myFlyTo1() {
+      var obj = {lng: 118.0850887298584, lat: 24.439001083374023,eyeHeight:2000,pitch:-50,heading:0.0,time:5};
+      viewerFlyToLonLat(obj);
+    }
+    function myFlyTo2() {
+      var obj = {lng: 118.1044813816513, lat: 24.451483144361173,eyeHeight:1000,pitch:-25,heading:0.0,time:5};
+      viewerFlyToLonLat(obj);
+    }
+
+
+    var flyToEntity = null;
+    function viewerFlyToLonLat(obj) {
+      console.log("飞行参数：", obj.lng, obj.lat, obj.eyeHeight);
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          var flyToHeight=updatedPositions[0].height;
+          if(typeof(flyToHeight)=="undefined"){
+            updatedPositions.obj.height = 0;
+          }else{
+            updatedPositions.obj.height = flyToHeight;
+          }
+          console.log("地形高度：", updatedPositions.obj.height);
+          if (flyToEntity) {
+            viewer.entities.remove(flyToEntity);
+          }
+          flyToEntity = new Cesium.Entity({
+            id: 'flyTmp',
+            position: Cesium.Cartesian3.fromDegrees(updatedPositions.obj.lng, updatedPositions.obj.lat, updatedPositions.obj.height),
+            point: {
+              pixelSize: 0,//控制居中的时候是否展示中心点
+              color: Cesium.Color.RED.withAlpha(0.9),
+              outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+              outlineWidth: 0
+            }
+          });
+          viewer.entities.add(flyToEntity);
+          var flyPromise = viewer.flyTo(flyToEntity, {
+            duration: updatedPositions.obj.time,//飞行时间,单位：秒
+            offset: {
+              heading: Cesium.Math.toRadians(updatedPositions.obj.heading),//旋转角度
+              pitch: Cesium.Math.toRadians(updatedPositions.obj.pitch),//倾斜角度
+              range: updatedPositions.obj.eyeHeight//视角高度
+            }
+          });
+          // 飞行完后
+          flyPromise.then(function (flyPromise) {
+            console.log("飞行结束");
+          }).otherwise(function (error) {
+            console.log(error);
+          });
+        });
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='myFlyTo1();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    飞行居中1(地形高度10米)
+  </el-button>
+  <el-button type="primary" onclick='myFlyTo2();' style='z-index:1000;position:absolute;top:110px;left:50px'>
+    飞行居中2(地形高度183米)
+  </el-button>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

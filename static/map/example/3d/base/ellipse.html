@@ -1,0 +1,132 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+    var stripeMaterial = new Cesium.StripeMaterialProperty({
+      evenColor: Cesium.Color.WHITE.withAlpha(0.5),
+      oddColor: Cesium.Color.BLUE.withAlpha(0.5),
+      repeat: 5.0,
+    });
+    var ellipseEntity=null;
+    function addEllipse() {
+      ellipseEntity=new Cesium.Entity({
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.449001083374023),
+        ellipse: {
+          semiMinorAxis: 300.0,//椭圆短轴（单位米）
+          semiMajorAxis: 500.0,//椭圆长轴（单位米）
+          rotation: Cesium.Math.toRadians(-40.0),
+          outline: true,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 4,
+          stRotation: Cesium.Math.toRadians(22),
+          material: Cesium.Color.GREENYELLOW.withAlpha(0.5),
+        },
+      });
+      viewer.entities.add(ellipseEntity);
+    }
+
+    var circleEntity=null;
+    function addCircle(){
+      circleEntity=new Cesium.Entity({
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023),
+        ellipse: {
+          semiMinorAxis: 500.0,//椭圆短轴（单位米）
+          semiMajorAxis: 500.0,//椭圆长轴（单位米）
+          rotation: Cesium.Math.toRadians(-40.0),
+          outline: true,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 4,
+          stRotation: Cesium.Math.toRadians(90),
+          material: stripeMaterial,
+        },
+      });
+      viewer.entities.add(circleEntity);
+    }
+
+
+    function addStandUpCircle(){
+
+
+      var position = Cesium.Cartesian3.fromDegrees(
+        118.0850887298584, 24.439001083374023, 300.0
+      );
+      var heading = Cesium.Math.toRadians(60);
+      var pitch = 0;
+      var roll = 0;
+      var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+      var orientation = Cesium.Transforms.headingPitchRollQuaternion(
+        position,
+        hpr
+      );
+
+      var redSphere = viewer.entities.add({
+        name: "Red sphere with black outline",
+        position: Cesium.Cartesian3.fromDegrees(118.0850887298584, 24.439001083374023, 300.0),
+        ellipsoid: {
+          radii: new Cesium.Cartesian3(3.0, 300.0, 300.0),
+          material: Cesium.Color.RED.withAlpha(0.5),
+          outline: false,
+          rotation: Cesium.Math.toRadians(120)
+        },
+        // orientation : {
+        //   heading : 0,
+        //   pitch:0,
+        //   roll:0
+        // }
+        orientation :orientation
+      });
+
+    }
+
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addEllipse();' style='z-index:1000;position:absolute;top:50px;left:60px'>椭圆
+  </el-button>
+
+  <el-button type="primary" onclick='addCircle();' style='z-index:1000;position:absolute;top:100px;left:50px'>圆
+  </el-button>
+
+  <el-button type="primary" onclick='addStandUpCircle();' style='z-index:1000;position:absolute;top:150px;left:50px'>圆(立起)
+  </el-button>
+
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

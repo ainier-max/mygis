@@ -1,0 +1,275 @@
+<html lang="en">
+<head>
+  <meta charset=utf-8/>
+  <meta name="referrer" content="no-referrer"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/jslib.3d.js"></script>
+  <!--地图依赖js-->
+  <script src="../../../map/vue-lib/mapConfig.3d.js"></script>
+
+  <!--坐标系转换-->
+  <script src="../../../map/vue-lib/mapjs/leaflet/leaflet/coordtransform.js"></script>
+  <style>
+    .cesium-popup {
+      position: absolute;
+      left: 0;
+      top: 5px;
+      text-align: left;
+    }
+
+    .cesium-popup-background {
+      background: rgba(0, 0, 0, .6);
+      border-radius: 6px;
+    }
+
+    .cesium-popup-content-wrapper {
+      text-align: center;
+      max-height: 600px;
+      overflow-y: auto;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, .4);
+      text-align: left;
+      border-radius: 3px;
+    }
+
+    .cesium-popup-color {
+      color: white;
+    }
+
+    .cesium-popup-content {
+      margin: 15px 10px 10px;
+      line-height: 1.4;
+      font-size: 13px;
+      max-width: 439px;
+      min-width: 50px;
+    }
+
+    .cesium-popup-tip-container {
+      margin: 0 auto;
+      width: 40px;
+      height: 13px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cesium-popup-tip {
+      box-shadow: 0 3px 14px rgba(0, 0, 0, .4);
+      width: 17px;
+      height: 17px;
+      padding: 1px;
+      margin: -10px auto 0;
+      -webkit-transform: rotate(45deg);
+      transform: rotate(45deg);
+    }
+
+    .cesium-popup-close-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 4px 4px 0 0;
+      text-align: center;
+      width: 18px;
+      height: 14px;
+      font: 16px/14px Tahoma, Verdana, sans-serif;
+      text-decoration: none;
+      font-weight: 700;
+      background: transparent;
+      z-index: 9999;
+    }
+
+    .cesium-popup-close-button:hover {
+      cursor: pointer;
+      color: #23527c;
+    }
+  </style>
+  <script>
+    var viewer = null;
+
+    function loadEnd() {
+      console.log("js地图初始化完成,地图对象:", mapVue.$refs.map.viewer);
+      viewer = mapVue.$refs.map.viewer;
+    }
+
+    function addHtml() {
+      var obj = {
+        lng: 118.0850887298584,
+        lat: 24.449001083374023
+      };
+      let cartographics = [Cesium.Cartographic.fromDegrees(obj.lng, obj.lat)];
+      cartographics.obj = obj;
+      Cesium.sampleTerrain(mapVue.$refs.map.viewer.scene.terrainProvider, 14, cartographics)
+        .then((updatedPositions) => {
+          console.log("高度：", updatedPositions[0].height);
+          updatedPositions.obj.height = updatedPositions[0].height;
+          addPopup(updatedPositions.obj);
+        });
+    }
+
+    /**
+     * 叠加气泡框
+     * @param obj
+     */
+    function addPopup(obj){
+      var htmlOverlay = document.getElementById("tooltip-view");
+      htmlOverlay.style.display = "block";
+      console.log("htmlOverlay对象：",htmlOverlay);
+      console.log("htmlOverlay高度：",htmlOverlay.offsetHeight);
+      console.log("htmlOverlay宽度：",htmlOverlay.offsetWidth);
+      var scratch = new Cesium.Cartesian2();
+      viewer.scene.preRender.addEventListener(function () {
+        var position = Cesium.Cartesian3.fromDegrees(obj.lng, obj.lat, obj.height);
+        var canvasPosition = viewer.scene.cartesianToCanvasCoordinates(
+          position,
+          scratch
+        );
+        if (Cesium.defined(canvasPosition)) {
+          htmlOverlay.style.top = canvasPosition.y - htmlOverlay.offsetHeight + "px";
+          htmlOverlay.style.left = canvasPosition.x - htmlOverlay.offsetWidth/2 + "px";
+        }
+      });
+    }
+
+    function addManyHtml() {
+      console.log("viewer.scene", viewer.scene);
+      var points = [{lng: 118.1044813816513, lat: 24.451483144361173}, {
+        lng: 118.0850887298584,
+        lat: 24.439001083374023
+      }];
+      for (var i = 0; i < points.length; i++) {
+        //方法1（根据坐标获取精准高度）
+        let cartographics= [Cesium.Cartographic.fromDegrees(points[i].lng, points[i].lat)];
+        //14为terrainProvider中对应的级别，在不同级别，相同坐标下所获取的高度不一致。如果要精准度较高，该值应根据地形服务尽可能地大。
+        //sampleTerrain :   获取非精确的地形的高度
+        //sampleTerrainMostDetailed： 获取尽量精确的地形的高度
+        cartographics.pointObj=points[i];
+        Cesium.sampleTerrain(mapVue.$refs.map.viewer.scene.terrainProvider, 14, cartographics)
+          .then((updatedPositions)=>{
+            console.log("updatedPositions：",updatedPositions);
+            console.log("updatedPositions高度：",updatedPositions[0].height);
+            updatedPositions.pointObj.height=updatedPositions[0].height;
+            addPoint(updatedPositions.pointObj);
+          });
+        //方法2（该值在不同级别下所获取的高度不一致，获得数值不准确）
+        // var carto = new Cesium.Cartographic.fromDegrees(points[i].lng, points[i].lat);
+        // var height = viewer.scene.globe.getHeight(carto);
+        // console.log("坐标点2：" + points[i].lng + "," + points[i].lat + "对应的高程数据值：", height);
+        // points[i].height = height;
+        // addPoint(points[i]);
+      }
+    }
+
+    function addPoint(obj) {
+      var htmlOverlay = document.createElement("div");
+      htmlOverlay.style.zIndex = 8888;
+      htmlOverlay.style.position = "absolute";
+      htmlOverlay.style.display = "block";
+      htmlOverlay.style.cursor = "pointer";
+      htmlOverlay.style.caretColor="rgba(0, 0, 0, 0)";
+
+      //方法1
+      // var img = document.createElement("img");
+      // img.src = "../../example/images/gif.gif";
+      // img.style.width = "42px";
+      // img.style.height = "42px";
+      // htmlOverlay.appendChild(img);
+      //方法2
+      var htmlStr="<img src='../../example/images/gif.gif' style='width: 42px;height: 42px'>";
+      htmlOverlay.innerHTML=htmlStr;
+
+      document.body.appendChild(htmlOverlay);
+      var scratch = new Cesium.Cartesian2();
+      viewer.scene.preRender.addEventListener(function () {
+        var position = Cesium.Cartesian3.fromDegrees(obj.lng, obj.lat, obj.height);
+        var canvasPosition = viewer.scene.cartesianToCanvasCoordinates(
+          position,
+          scratch
+        );
+        if (Cesium.defined(canvasPosition)) {
+          htmlOverlay.style.top = canvasPosition.y - 42 + "px";
+          htmlOverlay.style.left = canvasPosition.x - 21 + "px";
+        }
+      });
+    }
+
+    function showXQ(){
+      alert("您点击了详情");
+    }
+  </script>
+</head>
+
+<body>
+<div id="my-app">
+  <el-button type="primary" onclick='addHtml();' style='z-index:1000;position:absolute;top:50px;left:60px'>
+    自定义气泡框内容（html）
+  </el-button>
+
+  <el-button type="primary" onclick='addManyHtml();' style='z-index:1000;position:absolute;top:110px;left:50px'>多个GIF上图（html）
+  </el-button>
+
+  <!-- 消息提示框气泡 -->
+  <div id="tooltip-view" class="cesium-popup"
+       style="z-index:9999;display:none;">
+    <a class="cesium-popup-close-button cesium-popup-color"
+       onclick="document.getElementById('tooltip-view').style.display='none';">×</a>
+    <div class="cesium-popup-background" style="padding: 1px 0;">
+      <div id="tooltip-content" class="cesium-popup-content cesium-popup-color">
+        <table style="width: 200px;">
+          <tr>
+            <th scope="col" colspan="4" style="text-align:center;font-size:15px;">七天酒店</th>
+          </tr>
+          <tr>
+            <td>住用单位：</td>
+            <td>XX单位</td>
+          </tr>
+          <tr>
+            <td>建筑面积：</td>
+            <td>43平方米</td>
+          </tr>
+          <tr>
+            <td>建筑层数：</td>
+            <td>2</td>
+          </tr>
+          <tr>
+            <td>建筑结构：</td>
+            <td>钢混</td>
+          </tr>
+          <tr>
+            <td>建筑年份：</td>
+            <td>2006年</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="text-align:right;"><a style="color:aqua;" href="javascript:showXQ()">详情</a></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="cesium-popup-tip-container">
+      <div class="cesium-popup-tip  cesium-popup-background"></div>
+    </div>
+  </div>
+
+  <map-component ref="map" :id="id" :type="type" :config="config" :load-end="loadEndFun"
+                 style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+  var mapVue = new Vue({
+    el: '#my-app',
+    data: {
+      //地图配置信息（必须）
+      id: "map",
+      type: "js",
+      config: window.defaultMapConfig,
+      //地图加载完成回调方法
+      loadEndFun: "loadEnd"
+    },
+    components: {
+      'map-component': httpVueLoader('../../vue-map3d-component/cesium/map3d-component.vue', 'frontEnd')
+    },
+    mounted() {
+
+    }
+  });
+</script>
+</body>
+</html>

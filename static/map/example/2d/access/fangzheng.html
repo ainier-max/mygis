@@ -1,0 +1,50 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <!--vue依赖-->
+  <script src="../../../map/vue-lib/vuejs/vue.js"></script>
+  <!--地图依赖js-->
+<!--  <script src="../../../map/vue-lib/panda.gis.2d.min.js"></script>-->
+  <script src="../../../map/vue-lib/jslib.js"></script>
+  <!--地图配置文件-->
+  <script src="../../../map/vue-lib/mapConfig.js"></script>
+  <script>
+    function loadEnd(){
+        console.log("js地图初始化完成,地图对象:",mapVue.$refs.map.map);
+    }
+  </script>
+</head>
+<body>
+<div id="my-app">
+  <!--
+ type：类型[js,vue]
+ config：地图配置信息
+ -->
+  <map-component ref="map" :id="id" :type="type" :config="config" :init-position="initPosition" :load-end="loadEndFun" style='z-index:100;position: absolute;top: 0; bottom: 0;right: 0;left: 0;'></map-component>
+</div>
+<script>
+    //JS版地图接入步骤4：初始化VUE组件，并引入地图组件
+    var mapVue = new Vue({
+        el: '#my-app',
+        data: {
+            id: "map",
+            type: "js",
+            config: window.fangzhengMapConfig,
+            //地图初始定位
+            initPosition:{
+                level:12,//级别
+                centerPoint:[24.49822425842285,118.1246566772461]//中心点
+            },
+            //地图加载完成回调方法
+            loadEndFun:"loadEnd"
+        },
+        components: {
+            //引入map组件包中的地图组件
+            //前端
+            'map-component': httpVueLoader('../../vue-map-component/leaflet/map-component.vue', 'frontEnd')
+        }
+    });
+</script>
+</body>
+</html>
+
