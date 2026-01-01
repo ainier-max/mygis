@@ -1,7 +1,7 @@
 //window.deploymentPath="http://106.53.28.207/pandagis";
-window.deploymentPath="http://10.11.0.87:8091";
+window.deploymentPath="http://127.0.0.1:8091";
 //window.gisServerUrl="http://106.53.28.207:8081/myboot",
-window.gisServerUrl="http://10.11.0.87:8087";
+window.gisServerUrl="http://127.0.0.1:8087";
 //地图数据地址前缀
 window.mapDataUrl="http://10.254.10.38:8081/mapdata";
 
